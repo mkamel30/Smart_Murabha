@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import logo from '../assets/logo.png';
 import { NavLink, Outlet } from 'react-router-dom';
 import { ar } from '@/i18n/ar';
 import { 
@@ -37,7 +38,7 @@ export default function Layout() {
       `}>
         {/* Logo */}
         <div className="h-16 flex items-center justify-center border-b border-slate-100 px-4">
-          <img src="./logo.png" alt="Logo" className="h-10 w-auto" />
+          <img src={logo} alt="Logo" className="h-10 w-auto" />
         </div>
         
         {/* Nav Items */}
@@ -127,10 +128,6 @@ export default function Layout() {
           </div>
         </nav>
         
-        {/* Version */}
-        <div className="absolute bottom-0 w-full p-2 border-t border-slate-100 bg-white">
-          <p className="text-center text-[10px] text-slate-400 font-mono">V.1.0.8_05052026</p>
-        </div>
       </aside>
       
       {/* Mobile menu button */}
