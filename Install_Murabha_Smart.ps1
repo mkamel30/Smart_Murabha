@@ -14,20 +14,25 @@ if (Test-Path $shortcutPath) {
         $existingShortcut = $WshShell.CreateShortcut($shortcutPath)
         $exePath = $existingShortcut.TargetPath
         if ($exePath) {
-            $destFolder = Split-Path (Split-Path $exePath -Parent) -Parent
+            $destFolder = Split-Path $exePath -Parent
             Write-Host "Found existing installation at: $destFolder" -ForegroundColor Green
         }
     } catch {
-        Write-Host "Warning: Could not read shortcut. Will perform fresh install." -ForegroundColor Gray
+        Write-Host "Warning: Could not read shortcut." -ForegroundColor Gray
     }
 }
 
-# 2. Choose drive
-if (-not $destFolder) {
+# 2. Choose drive and ensure folder exists
+if (-not $destFolder -or $destFolder -eq "D:\" -or $destFolder -eq "C:\" -or $destFolder -eq "E:\") {
     $targetDrive = (Get-PSDrive -PSProvider FileSystem | Where-Object { $_.Name -ne "C" -and $_.Free -gt 1GB } | Select-Object -First 1).Root
     if (-not $targetDrive) { $targetDrive = "C:\" }
     $destFolder = Join-Path $targetDrive "Smart_Murabha"
     Write-Host "Target directory: $destFolder" -ForegroundColor Yellow
+}
+
+# Create folder if not exists
+if (!(Test-Path $destFolder)) { 
+    New-Item -ItemType Directory -Path $destFolder -Force | Out-Null 
 }
 
 # 3. Fetch from GitHub
@@ -41,8 +46,6 @@ try {
     pause
     exit
 }
-
-if (!(Test-Path $destFolder)) { New-Item -ItemType Directory -Path $destFolder | Out-Null }
 
 # 4. Close app
 Write-Host "Closing application if running..." -ForegroundColor DarkYellow
@@ -60,8 +63,9 @@ try {
     exit
 }
 
-Write-Host "Extracting files..." -ForegroundColor Yellow
+Write-Host "Extracting files to $destFolder..." -ForegroundColor Yellow
 try {
+    # Ensure destination is clear or handle carefully
     Expand-Archive -Path $zipPath -DestinationPath $destFolder -Force
 } catch {
     Write-Host "Error: Extraction failed. Please ensure the app is closed." -ForegroundColor Red
@@ -87,7 +91,13 @@ foreach ($path in $shortcuts) {
 
 Write-Host "SUCCESS: Update completed! Starting application..." -ForegroundColor Green
 Remove-Item $zipPath -ErrorAction SilentlyContinue
-Start-Process -FilePath $exePath -WorkingDirectory $workDir
+
+# Start the application
+if (Test-Path $exePath) {
+    Start-Process -FilePath $exePath -WorkingDirectory $workDir
+} else {
+    Write-Host "Warning: Executable not found at $exePath" -ForegroundColor Red
+}
 
 Write-Host "Press any key to close this window."
 pause
