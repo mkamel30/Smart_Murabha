@@ -8,6 +8,7 @@ dist/
 build/
 **/build/
 out/
+output/
 release/
 **/release/
 *.asar
