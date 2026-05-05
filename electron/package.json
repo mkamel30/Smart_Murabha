@@ -3,6 +3,7 @@
   "version": "1.0.8",
   "private": true,
   "productName": "Smart_Murabha",
+  "repository": "https://github.com/mkamel30/Smart_Murabha",
   "description": "Payment & Sales Desktop App",
   "author": "Murabha Team",
   "main": "dist/main.js",
