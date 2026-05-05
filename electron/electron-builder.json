@@ -14,8 +14,13 @@
       "filter": ["**/*"]
     },
     {
-      "from": "temp_deps/node_modules",
-      "to": "node_modules",
+      "from": "../node_modules/.prisma",
+      "to": "node_modules/.prisma",
+      "filter": ["**/*"]
+    },
+    {
+      "from": "../node_modules/@prisma/client",
+      "to": "node_modules/@prisma/client",
       "filter": ["**/*"]
     },
     {
@@ -50,7 +55,7 @@
     ],
     "icon": "build/icon.png"
   },
-  "asar": true,
+  "asar": false,
   "asarUnpack": [
     "**/node_modules/.prisma/**/*",
     "**/node_modules/@prisma/client/**/*"

@@ -45,7 +45,7 @@ try {
 if (!(Test-Path $destFolder)) { New-Item -ItemType Directory -Path $destFolder | Out-Null }
 
 # 4. Close app
-Write-Host "Closing application if running..." -ForegroundColor Orange
+Write-Host "Closing application if running..." -ForegroundColor DarkYellow
 Stop-Process -Name "Smart_Murabha" -ErrorAction SilentlyContinue
 Start-Sleep -Seconds 2
 
@@ -70,8 +70,8 @@ try {
 }
 
 # 6. Shortcuts
-$exePath = Join-Path $destFolder "win-unpacked\Smart_Murabha.exe"
-$workDir = Join-Path $destFolder "win-unpacked"
+$exePath = Join-Path $destFolder "Smart_Murabha.exe"
+$workDir = $destFolder
 $startupPath = [Environment]::GetFolderPath("Startup")
 
 $shortcuts = @($shortcutPath, (Join-Path $startupPath "$appName.lnk"))
