@@ -1,0 +1,67 @@
+{
+  "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
+  "appId": "com.company.payment-sales-app",
+  "productName": "Smart_Murabha",
+  "directories": {
+    "output": "release",
+    "buildResources": "build"
+  },
+  "files": [
+    "dist/**/*",
+    {
+      "from": "../backend/dist",
+      "to": "backend/dist",
+      "filter": ["**/*"]
+    },
+    {
+      "from": "temp_deps/node_modules",
+      "to": "node_modules",
+      "filter": ["**/*"]
+    },
+    {
+      "from": "../backend/package.json",
+      "to": "backend/package.json"
+    }
+  ],
+  "extraResources": [
+    {
+      "from": "../backend/prisma",
+      "to": "backend/prisma",
+      "filter": ["**/*", "!dev.db", "!dev.db-journal", "!dev.db-wal"]
+    },
+    {
+      "from": "../frontend/dist",
+      "to": "frontend",
+      "filter": ["**/*"]
+    }
+  ],
+  "extraFiles": [
+    {
+      "from": "setup.bat",
+      "to": "setup.bat"
+    }
+  ],
+  "win": {
+    "target": [
+      {
+        "target": "zip",
+        "arch": ["x64"]
+      }
+    ],
+    "icon": "build/icon.png"
+  },
+  "asar": true,
+  "asarUnpack": [
+    "**/node_modules/.prisma/**/*",
+    "**/node_modules/@prisma/client/**/*"
+  ],
+  "compression": "normal",
+  "electronFuses": {
+    "runAsNode": false,
+    "enableCookieEncryption": true,
+    "enableNodeOptionsEnvironmentVariable": false,
+    "enableNodeCliInspectArguments": false,
+    "enableEmbeddedAsarIntegrityValidation": true,
+    "onlyLoadAppFromAsar": false
+  }
+}

@@ -1,0 +1,119 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Customer {
+  id           String      @id @default(uuid())
+  bkCode       String
+  customerType String      @default("عام")
+  name         String
+  phone        String?
+  address      String?
+  notes        String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  sales     MachineSale[]
+  followUps FollowUp[]
+
+  @@unique([bkCode, customerType])
+  @@index([bkCode])
+  @@index([name])
+  @@index([phone])
+}
+
+model MachineSale {
+  id                   String      @id @default(uuid())
+  receiptNumber        String      @unique
+  customerId           String
+  machineSerial        String
+  saleType             String
+  totalPrice           Decimal
+  downPayment         Decimal     @default(0)
+  downPaymentReceipt  String?
+  paidAmount           Decimal     @default(0)
+  remainingAmount      Decimal
+  paymentPlace        String?
+  notes                String?
+  saleDate             DateTime
+  firstDueDate         DateTime?
+  months               Int?
+  status               String      @default("ACTIVE")
+  voidReason           String?
+  voidedAt             DateTime?
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+
+  customer        Customer    @relation(fields: [customerId], references: [id])
+  installments    Installment[]
+  payments       Payment[]
+
+  @@index([customerId])
+  @@index([saleDate])
+  @@index([status])
+  @@index([receiptNumber])
+  @@index([machineSerial])
+}
+
+model Installment {
+  id              String     @id @default(uuid())
+  saleId          String
+  installmentNo   Int
+  dueDate         DateTime
+  amount          Decimal
+  paidAmount      Decimal     @default(0)
+  isPaid          Boolean    @default(false)
+  isWaived        Boolean    @default(false)
+  waiveReason    String?
+  paidDate        DateTime?
+  receiptNumber   String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  sale            MachineSale @relation(fields: [saleId], references: [id], onDelete: Cascade)
+
+  @@index([saleId])
+  @@index([dueDate])
+  @@index([isPaid])
+}
+
+model Payment {
+  id              String      @id @default(uuid())
+  receiptNumber   String      @unique
+  saleId          String
+  paymentType     String
+  amount          Decimal
+  paymentPlace    String?
+  notes           String?
+  paidAt          DateTime    @default(now())
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  sale            MachineSale @relation(fields: [saleId], references: [id])
+
+  @@index([saleId])
+  @@index([paidAt])
+  @@index([receiptNumber])
+}
+
+model FollowUp {
+  id              String     @id @default(uuid())
+  customerId      String
+  note            String
+  nextFollowUp    DateTime?
+  isCompleted     Boolean    @default(false)
+  completedAt     DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  customer        Customer   @relation(fields: [customerId], references: [id])
+
+  @@index([customerId])
+  @@index([nextFollowUp])
+  @@index([isCompleted])
+}
