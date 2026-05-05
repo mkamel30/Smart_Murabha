@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import logo from '../assets/logo.png';
+import logo from '@/assets/logo.png';
 import { NavLink, Outlet } from 'react-router-dom';
 import { ar } from '@/i18n/ar';
 import { 
