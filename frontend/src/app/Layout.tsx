@@ -37,7 +37,7 @@ export default function Layout() {
       `}>
         {/* Logo */}
         <div className="h-16 flex items-center justify-center border-b border-slate-100 px-4">
-          <img src="logo.png" alt="Logo" className="h-10 w-auto" />
+          <img src="./logo.png" alt="Logo" className="h-10 w-auto" />
         </div>
         
         {/* Nav Items */}
