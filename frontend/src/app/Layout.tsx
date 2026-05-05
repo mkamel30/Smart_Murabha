@@ -129,7 +129,7 @@ export default function Layout() {
         
         {/* Version */}
         <div className="absolute bottom-0 w-full p-2 border-t border-slate-100 bg-white">
-          <p className="text-center text-[10px] text-slate-400 font-mono">V.1.0.6_05052026</p>
+          <p className="text-center text-[10px] text-slate-400 font-mono">V.1.0.8_05052026</p>
         </div>
       </aside>
       

@@ -27,7 +27,7 @@
     {
       "from": "../backend/prisma",
       "to": "backend/prisma",
-      "filter": ["**/*", "!dev.db", "!dev.db-journal", "!dev.db-wal"]
+      "filter": ["**/*", "!dev.db-journal", "!dev.db-wal"]
     },
     {
       "from": "../frontend/dist",

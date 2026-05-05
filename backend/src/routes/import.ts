@@ -66,7 +66,7 @@ router.post('/excel', upload.single('file'), async (req: Request, res: Response)
       monthlyInstallment: headers.findIndex(h => h.includes('القسط الشهري') || h.includes('قيمة القسط') || h.toLowerCase().includes('monthly')),
       downPayment: headers.findIndex(h => h.includes('مقدم') || h.toLowerCase().includes('down')),
       months: headers.findIndex(h => (h.includes('عدد') && (h.includes('قسط') || h.includes('أقساط'))) || h.toLowerCase().includes('months')),
-      lastPaymentDate: headers.findIndex(h => h.includes('آخر دفعة') || h.includes('آخر سداد') || h.includes('تاريخ السداد') || h.includes('آخر تحصيل') || h.toLowerCase().includes('last payment')),
+      lastPaymentDate: headers.findIndex(h => h.includes('آخر قسط مدفوع') || h.includes('آخر دفعة') || h.includes('آخر سداد') || h.includes('تاريخ السداد') || h.includes('آخر تحصيل') || h.toLowerCase().includes('last payment')),
       notes: headers.findIndex(h => h.includes('ملاحظات') || h.toLowerCase().includes('notes')),
     };
 
@@ -303,7 +303,7 @@ router.post('/excel', upload.single('file'), async (req: Request, res: Response)
 router.get('/template', async (req: Request, res: Response) => {
   // Note: Use Excel date column (serial number) or string format DD-MM-YYYY
   const template = [
-    ['كود العميل', 'نوع العميل', 'اسم العميل', 'السيريال', 'تاريخ البيع القديم', 'إجمالي قيمة العقد', 'إجمالي الأقساط المحصلة', 'المقدم', 'عدد الأقساط', 'قيمة القسط الشهري', 'تاريخ آخر دفعة', 'ملاحظات'],
+    ['كود العميل', 'نوع العميل', 'اسم العميل', 'السيريال', 'تاريخ البيع القديم', 'إجمالي قيمة العقد', 'إجمالي الأقساط المحصلة', 'المقدم', 'عدد الأقساط', 'قيمة القسط الشهري', 'تاريخ آخر قسط مدفوع', 'ملاحظات'],
     ['C001', 'مخبز', 'أحمد محمد', 'SN123456', '01-01-2024', '10000', '5000', '3000', '7', '1000', '15-03-2024', 'ملاحظة اختيارية'],
   ];
 

@@ -1,0 +1,53 @@
+# .github/workflows/release.yml
+name: Build and Release Smart Murabha
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: |
+          npm install
+          npm install -w frontend
+          npm install -w backend
+          npm install -w electron
+
+      - name: Build Frontend
+        run: npm run build -w frontend
+
+      - name: Build Backend
+        run: npm run build -w backend
+
+      - name: Build Electron App
+        run: npm run dist -w electron
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Release and Upload Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            electron/release/*.zip
+            electron/release/*.exe
+          name: Smart Murabha ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
