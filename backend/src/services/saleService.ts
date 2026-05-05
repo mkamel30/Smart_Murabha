@@ -436,7 +436,7 @@ export class SaleService {
   }
 
   async voidPayment(paymentId: string) {
-    return prisma.$transaction(async (tx) => {
+    return prisma.$transaction(async (tx: any) => {
       // 1. Get payment details
       const payment = await tx.payment.findUnique({
         where: { id: paymentId },
@@ -549,7 +549,7 @@ export class SaleService {
       throw new Error('البيع ملغى بالفعل');
     }
 
-    return prisma.$transaction(async (tx) => {
+    return prisma.$transaction(async (tx: any) => {
       // 1. Delete all unpaid installments
       await tx.installment.deleteMany({
         where: { saleId: id, isPaid: false }
@@ -591,15 +591,15 @@ export class SaleService {
       throw new Error('لا توجد أقساط غير مدفوعة لإعادة الحساب');
     }
 
-    const totalUnpaid = unpaidInstallments.reduce((sum, inst) => sum + Number(inst.amount) - Number(inst.paidAmount), 0);
+    const totalUnpaid = unpaidInstallments.reduce((sum: number, inst: any) => sum + Number(inst.amount) - Number(inst.paidAmount), 0);
     const newInstallmentAmount = Math.round((totalUnpaid / newMonths) * 100) / 100;
 
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: any) => {
       await tx.installment.deleteMany({ where: { saleId: id, isPaid: false } });
 
       // Calculate base date for new installments
       const paidInstallments = Array.isArray(sale.installments) ? sale.installments.filter(inst => inst.isPaid) : [];
-      const lastPaidInst = paidInstallments.length > 0 ? paidInstallments.sort((a, b) => b.installmentNo - a.installmentNo)[0] : null;
+      const lastPaidInst = paidInstallments.length > 0 ? paidInstallments.sort((a: any, b: any) => b.installmentNo - a.installmentNo)[0] : null;
       
       const baseDate = lastPaidInst 
         ? new Date(lastPaidInst.dueDate) 
