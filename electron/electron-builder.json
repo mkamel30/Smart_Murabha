@@ -55,6 +55,9 @@
     ],
     "icon": "build/icon.png"
   },
+  "extraFiles": [
+    "../Install_Murabha_Smart.ps1"
+  ],
   "asar": true,
   "asarUnpack": [
     "**/node_modules/.prisma/**/*",

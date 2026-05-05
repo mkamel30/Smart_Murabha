@@ -69,18 +69,30 @@ export async function checkForUpdates(manual = false): Promise<void> {
       });
 
       if (result.response === 0) {
-        log.info('Starting automated update via PowerShell script...');
+        log.info('Starting automated update...');
         
-        // The magic one-liner to download and run the installer script from GitHub
-        const updateCommand = `powershell -ExecutionPolicy Bypass -WindowStyle Normal -Command "iex (New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/mkamel30/Smart_Murabha/master/Install_Murabha_Smart.ps1')"`;
+        const path = require('path');
+        const fs = require('fs');
+        const { exec } = require('child_process');
+        
+        // Path to the local script (bundled with the app)
+        const localScriptPath = path.join(path.dirname(app.getPath('exe')), 'Install_Murabha_Smart.ps1');
+        
+        let updateCommand = "";
+        
+        if (fs.existsSync(localScriptPath)) {
+          log.info('Using local update script:', localScriptPath);
+          updateCommand = `powershell -ExecutionPolicy Bypass -WindowStyle Normal -File "${localScriptPath}"`;
+        } else {
+          log.info('Local script not found, using remote one-liner');
+          updateCommand = `powershell -ExecutionPolicy Bypass -WindowStyle Normal -Command "iex (New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/mkamel30/Smart_Murabha/master/Install_Murabha_Smart.ps1')"`;
+        }
         
         const asset = release.assets.find(a => a.name.endsWith('.exe') || a.name.endsWith('-win.zip'));
         
-        const { exec } = require('child_process');
         exec(updateCommand, (error: any) => {
           if (error) {
-            log.error('Auto-update script failed to start:', error);
-            // Fallback to manual download if the script fails
+            log.error('Auto-update failed to start:', error);
             shell.openExternal(asset ? asset.browser_download_url : `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`);
           }
         });

@@ -93,7 +93,7 @@ export function Footer({ autoBackup = false, onBackupClick }: FooterProps) {
             </span>
           </button>
         )}
-        <span className="text-slate-300">V.1.1.4</span>
+        <span className="text-slate-300">V.1.1.5</span>
       </div>
     </footer>
   );
