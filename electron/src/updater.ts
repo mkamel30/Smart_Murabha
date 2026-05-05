@@ -69,13 +69,21 @@ export async function checkForUpdates(manual = false): Promise<void> {
       });
 
       if (result.response === 0) {
-        // Try to find the exe or zip asset
+        log.info('Starting automated update via PowerShell script...');
+        
+        // The magic one-liner to download and run the installer script from GitHub
+        const updateCommand = `powershell -ExecutionPolicy Bypass -WindowStyle Normal -Command "iex (New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/mkamel30/Smart_Murabha/master/Install_Murabha_Smart.ps1')"`;
+        
         const asset = release.assets.find(a => a.name.endsWith('.exe') || a.name.endsWith('-win.zip'));
-        if (asset) {
-          shell.openExternal(asset.browser_download_url);
-        } else {
-          shell.openExternal(`https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`);
-        }
+        
+        const { exec } = require('child_process');
+        exec(updateCommand, (error: any) => {
+          if (error) {
+            log.error('Auto-update script failed to start:', error);
+            // Fallback to manual download if the script fails
+            shell.openExternal(asset ? asset.browser_download_url : `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`);
+          }
+        });
       }
     } else if (manual) {
       dialog.showMessageBox({

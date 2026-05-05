@@ -36,7 +36,10 @@ jobs:
         run: npm run build -w backend
 
       - name: Build Electron App
-        run: npm run dist -w electron
+        run: |
+          cd electron
+          npx prisma generate --schema=../backend/prisma/schema.prisma
+          npm run dist
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
