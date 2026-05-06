@@ -161,7 +161,7 @@ export default function Dashboard() {
           value={formatCurrency(Number(s.dueThisMonthTotal))}
           sub={`${s.dueThisMonth.length} قسط`}
           bgColor="bg-amber-600"
-          onClick={() => navigate('/reports', { state: { reportType: 'collections', filter: 'currentMonth' } })}
+          onClick={() => navigate('/reports', { state: { reportType: 'overdue', filter: 'currentMonth' } })}
         />
         <LoanStatCard
           icon={Banknote}
