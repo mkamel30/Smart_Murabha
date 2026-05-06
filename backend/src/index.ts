@@ -28,7 +28,7 @@ const _filename = typeof __filename !== 'undefined' ? __filename : fileURLToPath
 const _dirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(_filename);
 
 const app = express();
-const PORT = process.env.PORT || 3005; // Use environment variable or default to 3005
+const PORT = process.env.PORT || 3007; // Use environment variable or default to 3007
 
 const allowedOrigins = process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:3001', 'file://'];
 

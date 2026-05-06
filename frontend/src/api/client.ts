@@ -5,7 +5,7 @@ const getApiBaseUrl = () => {
     return import.meta.env.VITE_API_URL;
   }
   if (window.location.protocol === 'file:') {
-    return 'http://127.0.0.1:3005/api';
+    return 'http://127.0.0.1:3007/api';
   }
   return '/api';
 };

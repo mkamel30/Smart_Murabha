@@ -9,7 +9,21 @@ log.transports.file.level = 'info';
 log.transports.console.level = 'debug';
 log.info('Application starting...');
 
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  log.info('Another instance is already running, quitting...');
+  app.quit();
+}
+
 let mainWindow: BrowserWindow | null = null;
+
+app.on('second-instance', () => {
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+  }
+});
 
 function getLocalIP(): string {
   const interfaces = os.networkInterfaces();
@@ -67,7 +81,7 @@ async function startBackend() {
   const dbPath = getDbPath();
   const formattedDbPath = dbPath.replace(/\\/g, '/');
   
-  process.env.PORT = '3005';
+  process.env.PORT = '3007';
   process.env.NODE_ENV = 'production';
   process.env.DATABASE_URL = `file:${formattedDbPath}`;
   process.env.SERVE_FRONTEND = 'true'; // Allow network access
@@ -79,18 +93,7 @@ async function startBackend() {
   }
 
   if (app.isPackaged) {
-    try {
-      const serverPath = path.join(getBackendDir(), 'dist', 'index.cjs');
-      log.info(`Loading backend module: ${serverPath}`);
-      require(serverPath);
-      log.info('Backend module loaded successfully');
-    } catch (err: any) {
-      log.error('Failed to load backend module:', err);
-      const { dialog } = require('electron');
-      dialog.showErrorBox('Backend Error', `Failed to start the backend server:\n\n${err.message || err}\n\nPath: ${path.join(getBackendDir(), 'dist', 'index.cjs')}`);
-    }
-  } else {
-    log.info('Development mode: checking if backend is already running on 3005...');
+    // Check if port 3005 is already in use
     const net = await import('net');
     const isPortBusy = await new Promise((resolve) => {
       const server = net.createServer();
@@ -103,14 +106,48 @@ async function startBackend() {
     });
 
     if (isPortBusy) {
-      log.info('Backend already running on port 3005, skipping fork.');
+      log.error('Port 3005 is already in use');
+      const { dialog } = require('electron');
+      dialog.showErrorBox(
+        'خطأ في تشغيل البرنامج', 
+        'المنفذ (Port 3005) مستخدم بالفعل. يرجى التأكد من إغلاق أي نسخة أخرى من البرنامج أو إعادة تشغيل الجهاز.'
+      );
+      app.quit();
+      return;
+    }
+
+    try {
+      const serverPath = path.join(getBackendDir(), 'dist', 'index.cjs');
+      log.info(`Loading backend module: ${serverPath}`);
+      require(serverPath);
+      log.info('Backend module loaded successfully');
+    } catch (err: any) {
+      log.error('Failed to load backend module:', err);
+      const { dialog } = require('electron');
+      dialog.showErrorBox('Backend Error', `Failed to start the backend server:\n\n${err.message || err}\n\nPath: ${path.join(getBackendDir(), 'dist', 'index.cjs')}`);
+    }
+  } else {
+    log.info('Development mode: checking if backend is already running on 3007...');
+    const net = await import('net');
+    const isPortBusy = await new Promise((resolve) => {
+      const server = net.createServer();
+      server.once('error', () => resolve(true));
+      server.once('listening', () => {
+        server.close();
+        resolve(false);
+      });
+      server.listen(3007);
+    });
+
+    if (isPortBusy) {
+      log.info('Backend already running on port 3007, skipping fork.');
     } else {
-      log.info('Starting backend fork on port 3005...');
+      log.info('Starting backend fork on port 3007...');
       const { fork } = await import('child_process');
       fork(path.join(getBackendDir(), 'src', 'index.ts'), [], {
         execArgv: ['--import', 'tsx'],
         cwd: getBackendDir(),
-        env: { ...process.env, PORT: '3005', NODE_ENV: 'development' }
+        env: { ...process.env, PORT: '3007', NODE_ENV: 'development' }
       });
     }
   }
@@ -154,6 +191,6 @@ app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
-ipcMain.handle('get-network-url', () => `http://${getLocalIP()}:3005`);
+ipcMain.handle('get-network-url', () => `http://${getLocalIP()}:3007`);
 ipcMain.handle('shell:openExternal', (e, url) => shell.openExternal(url));
 ipcMain.handle('check-for-updates', () => checkForUpdates(true));
