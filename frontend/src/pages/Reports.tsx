@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { reportsApi, exportApi, customersApi } from '@/api/client';
 import { formatCurrency, formatDate, downloadBlob } from '@/lib/utils';
 import type { SalesReport, CollectionsReport, OverdueReport, Customer } from '@/types';
@@ -34,14 +35,34 @@ interface MonthClosingReport {
 }
 
 export default function Reports() {
-  const [reportType, setReportType] = useState<'sales' | 'collections' | 'overdue' | 'monthClosing'>('sales');
+  const location = useLocation();
+  const state = location.state as any;
+  const [reportType, setReportType] = useState<'sales' | 'collections' | 'overdue' | 'monthClosing'>(
+    state?.reportType || 'sales'
+  );
   const [salesReport, setSalesReport] = useState<SalesReport | null>(null);
   const [collectionsReport, setCollectionsReport] = useState<CollectionsReport | null>(null);
   const [overdueReport, setOverdueReport] = useState<OverdueReport | null>(null);
   const [monthClosingReport, setMonthClosingReport] = useState<MonthClosingReport | null>(null);
   const [loading, setLoading] = useState(true);
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  
+  // Auto-set dates if currentMonth filter is requested
+  const [startDate, setStartDate] = useState(() => {
+    if (state?.filter === 'currentMonth') {
+      const now = new Date();
+      return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    }
+    return '';
+  });
+  
+  const [endDate, setEndDate] = useState(() => {
+    if (state?.filter === 'currentMonth') {
+      const now = new Date();
+      return new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+    }
+    return '';
+  });
+
   const [selectedCustomer, setSelectedCustomer] = useState('');
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);

@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { salesApi, customersApi } from '@/api/client';
 import { formatCurrency } from '@/lib/utils';
 import type { MachineSale, Customer } from '@/types';
@@ -18,11 +18,15 @@ type SaleTypeFilter = '' | 'CASH' | 'INSTALLMENT';
 export default function Sales() {
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
+  const state = location.state as any;
   const [sales, setSales] = useState<MachineSale[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<SaleStatusFilter>('');
+  const [statusFilter, setStatusFilter] = useState<SaleStatusFilter>(
+    state?.filter === 'active' ? 'ACTIVE' : ''
+  );
   const [typeFilter, setTypeFilter] = useState<SaleTypeFilter>('');
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({

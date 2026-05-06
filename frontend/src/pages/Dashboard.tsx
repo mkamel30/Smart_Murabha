@@ -145,7 +145,7 @@ export default function Dashboard() {
           value={formatCurrency(Number(s.todayCollections))}
           sub={`${s.todayPaymentCount} عملية`}
           bgColor="bg-[#0A2472]"
-          onClick={() => navigate('/sales')}
+          onClick={() => navigate('/payments')}
         />
         <LoanStatCard
           icon={AlertTriangle}
@@ -153,7 +153,7 @@ export default function Dashboard() {
           value={formatCurrency(Number(s.overdueTotal))}
           sub={`${s.overdueCount} قسط متأخر`}
           bgColor="bg-red-600"
-          onClick={() => navigate('/followups')}
+          onClick={() => navigate('/reports', { state: { reportType: 'overdue' } })}
         />
         <LoanStatCard
           icon={CalendarCheck}
@@ -161,7 +161,7 @@ export default function Dashboard() {
           value={formatCurrency(Number(s.dueThisMonthTotal))}
           sub={`${s.dueThisMonth.length} قسط`}
           bgColor="bg-amber-600"
-          onClick={() => navigate('/followups')}
+          onClick={() => navigate('/reports', { state: { reportType: 'collections', filter: 'currentMonth' } })}
         />
         <LoanStatCard
           icon={Banknote}
@@ -169,7 +169,7 @@ export default function Dashboard() {
           value={formatCurrency(Number(s.totalRemainingAll))}
           sub={`${s.totalSalesCount} عملية`}
           bgColor="bg-[#1e3a8a]"
-          onClick={() => navigate('/sales')}
+          onClick={() => navigate('/sales', { state: { filter: 'active' } })}
         />
       </div>
 
