@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { dashboardApi } from '@/api/client';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type { DashboardStats } from '@/types';
@@ -20,15 +21,19 @@ import {
   PieChart, Pie, Cell, Legend
 } from 'recharts';
 
-function StatCard({ icon: Icon, label, value, sub, colorClass }: {
+function StatCard({ icon: Icon, label, value, sub, colorClass, onClick }: {
   icon: React.ElementType;
   label: string;
   value: string;
   sub?: string;
   colorClass: string;
+  onClick?: () => void;
 }) {
   return (
-    <div className="flex items-center gap-2 p-3 bg-white rounded-xl border border-slate-100 shadow-sm min-w-0">
+    <div 
+      onClick={onClick}
+      className={`flex items-center gap-2 p-3 bg-white rounded-xl border border-slate-100 shadow-sm min-w-0 transition-all ${onClick ? 'cursor-pointer hover:shadow-md hover:border-slate-300 active:scale-95' : ''}`}
+    >
       <div className={`p-2 rounded-lg ${colorClass} shrink-0`}>
         <Icon size={18} className={colorClass.replace('bg-', 'text-').replace('/10', '/70').replace('/5', '/60')} />
       </div>
@@ -41,15 +46,19 @@ function StatCard({ icon: Icon, label, value, sub, colorClass }: {
   );
 }
 
-function LoanStatCard({ icon: Icon, label, value, sub, bgColor }: {
+function LoanStatCard({ icon: Icon, label, value, sub, bgColor, onClick }: {
   icon: React.ElementType;
   label: string;
   value: string;
   sub?: string;
   bgColor: string;
+  onClick?: () => void;
 }) {
   return (
-    <div className={`flex items-center gap-2 p-3 rounded-xl ${bgColor} text-white min-w-0`}>
+    <div 
+      onClick={onClick}
+      className={`flex items-center gap-2 p-3 rounded-xl ${bgColor} text-white min-w-0 shadow-sm transition-all ${onClick ? 'cursor-pointer hover:brightness-110 hover:shadow-md active:scale-95' : ''}`}
+    >
       <div className="p-2 rounded-lg bg-white/20 shrink-0">
         <Icon size={18} className="text-white" />
       </div>
@@ -65,6 +74,7 @@ function LoanStatCard({ icon: Icon, label, value, sub, bgColor }: {
 const COLORS = ['#0A2472', '#14b8a6', '#f59e0b', '#ef4444', '#8b5cf6'];
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -135,6 +145,7 @@ export default function Dashboard() {
           value={formatCurrency(Number(s.todayCollections))}
           sub={`${s.todayPaymentCount} عملية`}
           bgColor="bg-[#0A2472]"
+          onClick={() => navigate('/sales')}
         />
         <LoanStatCard
           icon={AlertTriangle}
@@ -142,6 +153,7 @@ export default function Dashboard() {
           value={formatCurrency(Number(s.overdueTotal))}
           sub={`${s.overdueCount} قسط متأخر`}
           bgColor="bg-red-600"
+          onClick={() => navigate('/followups')}
         />
         <LoanStatCard
           icon={CalendarCheck}
@@ -149,6 +161,7 @@ export default function Dashboard() {
           value={formatCurrency(Number(s.dueThisMonthTotal))}
           sub={`${s.dueThisMonth.length} قسط`}
           bgColor="bg-amber-600"
+          onClick={() => navigate('/followups')}
         />
         <LoanStatCard
           icon={Banknote}
@@ -156,6 +169,7 @@ export default function Dashboard() {
           value={formatCurrency(Number(s.totalRemainingAll))}
           sub={`${s.totalSalesCount} عملية`}
           bgColor="bg-[#1e3a8a]"
+          onClick={() => navigate('/sales')}
         />
       </div>
 
@@ -166,30 +180,35 @@ export default function Dashboard() {
           label={ar.dashboard.cashSales}
           value={formatCurrency(Number(s.cashSalesTotal))}
           colorClass="bg-blue-50 text-blue-600"
+          onClick={() => navigate('/sales')}
         />
         <StatCard
           icon={CreditCard}
           label={ar.dashboard.installmentSales}
           value={formatCurrency(Number(s.installmentSalesTotal))}
           colorClass="bg-purple-50 text-purple-600"
+          onClick={() => navigate('/sales')}
         />
         <StatCard
           icon={Banknote}
           label={ar.dashboard.totalPaid}
           value={formatCurrency(Number(s.totalPaidAll))}
           colorClass="bg-emerald-50 text-emerald-600"
+          onClick={() => navigate('/sales')}
         />
         <StatCard
           icon={ShoppingCart}
           label={ar.dashboard.totalSales}
           value={String(s.totalSalesCount)}
           colorClass="bg-slate-50 text-slate-600"
+          onClick={() => navigate('/sales')}
         />
         <StatCard
           icon={Users}
           label={ar.dashboard.activeCustomers}
           value={String(s.activeCustomers)}
           colorClass="bg-teal-50 text-teal-600"
+          onClick={() => navigate('/customers')}
         />
         <StatCard
           icon={Calendar}
@@ -197,6 +216,7 @@ export default function Dashboard() {
           value={String(s.dueThisMonth.length)}
           sub={formatCurrency(Number(s.dueThisMonthTotal))}
           colorClass="bg-orange-50 text-orange-600"
+          onClick={() => navigate('/followups')}
         />
       </div>
 
@@ -286,7 +306,11 @@ export default function Dashboard() {
           </div>
           <div className="divide-y divide-slate-50">
             {s.recentPayments?.slice(0, 5).map((payment) => (
-              <div key={payment.id} className="flex items-center justify-between px-5 py-2.5 hover:bg-slate-50/50">
+              <div 
+                key={payment.id} 
+                onClick={() => navigate(`/sales/${payment.saleId}`)}
+                className="flex items-center justify-between px-5 py-2.5 hover:bg-slate-100 cursor-pointer transition-colors"
+              >
                 <div className="min-w-0 flex-1">
                   <div className="font-medium text-slate-800 truncate text-sm">
                     {payment.sale?.customer?.name} ({payment.sale?.customer?.bkCode})
@@ -312,7 +336,11 @@ export default function Dashboard() {
           </div>
           <div className="divide-y divide-slate-50">
             {s.upcomingDue?.slice(0, 5).map((inst) => (
-              <div key={inst.id} className="flex items-center justify-between px-5 py-2.5 hover:bg-slate-50/50">
+              <div 
+                key={inst.id} 
+                onClick={() => navigate(`/customers/${inst.sale?.customerId}`)}
+                className="flex items-center justify-between px-5 py-2.5 hover:bg-slate-100 cursor-pointer transition-colors"
+              >
                 <div className="min-w-0 flex-1">
                   <div className="font-medium text-slate-800 truncate text-sm">
                     {inst.sale?.customer?.name} ({inst.sale?.customer?.bkCode})
@@ -350,7 +378,11 @@ export default function Dashboard() {
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {s.dueThisMonth.slice(0, 8).map((inst) => (
-                  <tr key={inst.id} className="hover:bg-slate-50/50">
+                  <tr 
+                    key={inst.id} 
+                    onClick={() => navigate(`/customers/${inst.sale?.customerId}`)}
+                    className="hover:bg-slate-100 cursor-pointer transition-colors"
+                  >
                     <td className="px-5 py-2.5 text-sm font-medium text-slate-800">
                       {inst.sale?.customer?.name} ({inst.sale?.customer?.bkCode})
                     </td>
