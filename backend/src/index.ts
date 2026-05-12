@@ -170,9 +170,13 @@ app.use((err: AppError, req: express.Request, res: express.Response, next: expre
         errorMessage = 'لا يمكن حذف السجل لوجود بيانات مرتبطة به';
         statusCode = 400;
         break;
+      case 'P2024':
+        errorMessage = 'قاعدة البيانات مشغولة حالياً (Timeout). يرجى التأكد من عدم وجود نسخ أخرى تعمل.';
+        statusCode = 503;
+        break;
       default:
-        errorMessage = 'خطأ في قاعدة البيانات';
-        statusCode = 400;
+        errorMessage = `خطأ في قاعدة البيانات: ${err.message}`;
+        statusCode = 500;
     }
   }
   
