@@ -93,7 +93,7 @@ async function startBackend() {
   }
 
   if (app.isPackaged) {
-    // Check if port 3005 is already in use
+    // Check if port 3007 is already in use
     const net = await import('net');
     const isPortBusy = await new Promise((resolve) => {
       const server = net.createServer();
@@ -102,15 +102,15 @@ async function startBackend() {
         server.close();
         resolve(false);
       });
-      server.listen(3005);
+      server.listen(3007);
     });
 
     if (isPortBusy) {
-      log.error('Port 3005 is already in use');
+      log.error('Port 3007 is already in use');
       const { dialog } = require('electron');
       dialog.showErrorBox(
         'خطأ في تشغيل البرنامج', 
-        'المنفذ (Port 3005) مستخدم بالفعل. يرجى التأكد من إغلاق أي نسخة أخرى من البرنامج أو إعادة تشغيل الجهاز.'
+        'المنفذ (Port 3007) مستخدم بالفعل. يرجى التأكد من إغلاق أي نسخة أخرى من البرنامج أو إعادة تشغيل الجهاز.'
       );
       app.quit();
       return;
