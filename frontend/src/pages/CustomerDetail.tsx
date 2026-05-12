@@ -36,9 +36,10 @@ export default function CustomerDetail() {
     return <div className="text-center py-8">{ar.common.noData}</div>;
   }
 
-  const totalSales = customer.sales?.reduce((sum, s) => sum + Number(s.totalPrice), 0) || 0;
-  const totalPaid = customer.sales?.reduce((sum, s) => sum + Number(s.paidAmount), 0) || 0;
-  const totalRemaining = customer.sales?.reduce((sum, s) => sum + Number(s.remainingAmount), 0) || 0;
+  const activeSales = customer.sales?.filter(s => s.status !== 'VOIDED') || [];
+  const totalSales = activeSales.reduce((sum, s) => sum + Number(s.totalPrice), 0);
+  const totalPaid = activeSales.reduce((sum, s) => sum + Number(s.paidAmount), 0);
+  const totalRemaining = activeSales.reduce((sum, s) => sum + Number(s.remainingAmount), 0);
 
   return (
     <div className="space-y-4">

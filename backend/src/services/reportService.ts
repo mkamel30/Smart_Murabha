@@ -94,7 +94,7 @@ export class ReportService {
 
     const summary = {
       totalOverdue: overdue.length,
-      totalAmount: overdue.reduce((sum, inst) => sum + (Number(inst.amount) - Number(inst.paidAmount)), 0),
+      totalAmount: Math.round(overdue.reduce((sum, inst) => sum + (Number(inst.amount) - Number(inst.paidAmount)), 0)),
       byCustomer: overdue.reduce((acc, inst) => {
         const key = inst.sale.customerId;
         if (!acc[key]) {
@@ -189,23 +189,23 @@ export class ReportService {
       month: { year, month, name: new Date(year, month - 1).toLocaleString('ar', { month: 'long', year: 'numeric' }) },
       period: { start: startOfMonth, end: endOfMonth },
       sales: {
-        cash: { count: cashSales.length, amount: cashSales.reduce((sum, s) => sum + Number(s.totalPrice), 0) },
-        installment: { count: installmentSales.length, amount: installmentSales.reduce((sum, s) => sum + Number(s.totalPrice), 0) },
-        total: { count: salesInMonth.length, amount: salesInMonth.reduce((sum, s) => sum + Number(s.totalPrice), 0) },
+        cash: { count: cashSales.length, amount: Math.round(cashSales.reduce((sum, s) => sum + Number(s.totalPrice), 0)) },
+        installment: { count: installmentSales.length, amount: Math.round(installmentSales.reduce((sum, s) => sum + Number(s.totalPrice), 0)) },
+        total: { count: salesInMonth.length, amount: Math.round(salesInMonth.reduce((sum, s) => sum + Number(s.totalPrice), 0)) },
       },
       collections: {
-        cashSale: { count: cashPayments.length, amount: cashPayments.reduce((sum, p) => sum + Number(p.amount), 0) },
-        downPayment: { count: downPayments.length, amount: downPayments.reduce((sum, p) => sum + Number(p.amount), 0) },
-        installment: { count: installmentPayments.length, amount: installmentPayments.reduce((sum, p) => sum + Number(p.amount), 0) },
-        total: { count: paymentsInMonth.length, amount: paymentsInMonth.reduce((sum, p) => sum + Number(p.amount), 0) },
+        cashSale: { count: cashPayments.length, amount: Math.round(cashPayments.reduce((sum, p) => sum + Number(p.amount), 0)) },
+        downPayment: { count: downPayments.length, amount: Math.round(downPayments.reduce((sum, p) => sum + Number(p.amount), 0)) },
+        installment: { count: installmentPayments.length, amount: Math.round(installmentPayments.reduce((sum, p) => sum + Number(p.amount), 0)) },
+        total: { count: paymentsInMonth.length, amount: Math.round(paymentsInMonth.reduce((sum, p) => sum + Number(p.amount), 0)) },
       },
       overdue: {
         count: overdueAtEnd.length,
-        amount: overdueAtEnd.reduce((sum, inst) => sum + (Number(inst.amount) - Number(inst.paidAmount)), 0),
+        amount: Math.round(overdueAtEnd.reduce((sum, inst) => sum + (Number(inst.amount) - Number(inst.paidAmount)), 0)),
         details: overdueAtEnd.slice(0, 50),
       },
       summary: {
-        activeDebt: activeSales.reduce((sum, s) => sum + Number(s.remainingAmount), 0),
+        activeDebt: Math.round(activeSales.reduce((sum, s) => sum + Number(s.remainingAmount), 0)),
         customerCount: await prisma.customer.count(),
       }
     };

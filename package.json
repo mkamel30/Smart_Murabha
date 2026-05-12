@@ -1,7 +1,7 @@
 {
   "name": "payment-app",
-  "version": "1.2.3",
-  "versionLabel": "V.1.2.3",
+  "version": "1.2.4",
+  "versionLabel": "1.2.4",
   "private": true,
   "description": "Payment & Sales Desktop App for collection team",
   "workspaces": [

@@ -22,4 +22,6 @@ declare module "*.png";
 declare module "*.jpg";
 declare module "*.svg";
 
+declare const __APP_VERSION__: string;
+
 export {};

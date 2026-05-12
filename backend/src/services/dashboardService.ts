@@ -83,13 +83,13 @@ export class DashboardService {
       })
     ]);
 
-    const todayCollections = todayPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+    const todayCollections = Math.round(todayPayments.reduce((sum, p) => sum + Number(p.amount), 0));
     const todayPaymentCount = todayPayments.length;
     
-    const overdueTotal = overdueInstallments.reduce((sum, inst) => sum + Number(inst.amount) - Number(inst.paidAmount), 0);
+    const overdueTotal = Math.round(overdueInstallments.reduce((sum, inst) => sum + Number(inst.amount) - Number(inst.paidAmount), 0));
     const overdueCount = overdueInstallments.length;
 
-    const dueThisMonthTotal = dueThisMonth.reduce((sum, inst) => sum + Number(inst.amount) - Number(inst.paidAmount), 0);
+    const dueThisMonthTotal = Math.round(dueThisMonth.reduce((sum, inst) => sum + Number(inst.amount) - Number(inst.paidAmount), 0));
 
     return {
       todayCollections,

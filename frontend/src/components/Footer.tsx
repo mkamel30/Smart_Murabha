@@ -93,7 +93,7 @@ export function Footer({ autoBackup = false, onBackupClick }: FooterProps) {
             </span>
           </button>
         )}
-        <span className="text-slate-300">V.1.1.9</span>
+        <span className="text-slate-300">{typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'V.1.2.3'}</span>
       </div>
     </footer>
   );

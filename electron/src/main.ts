@@ -140,14 +140,26 @@ async function startBackend() {
     });
 
     if (isPortBusy) {
-      log.info('Backend already running on port 3007, skipping fork.');
+      log.warn('Backend already running on port 3007. This might be an orphaned process from a previous session.');
+      const { dialog } = require('electron');
+      dialog.showMessageBox({
+        type: 'warning',
+        title: 'تنبيه: نسخة أخرى تعمل',
+        message: 'يوجد نسخة من محرك البيانات تعمل بالفعل في الخلفية. إذا واجهت أخطاء، يرجى إغلاق البرنامج وإنهاء عملية node.exe من مدير المهام (Task Manager).',
+        buttons: ['موافق']
+      });
     } else {
       log.info('Starting backend fork on port 3007...');
       const { fork } = await import('child_process');
-      fork(path.join(getBackendDir(), 'src', 'index.ts'), [], {
+      const backendProcess = fork(path.join(getBackendDir(), 'src', 'index.ts'), [], {
         execArgv: ['--import', 'tsx'],
         cwd: getBackendDir(),
         env: { ...process.env, PORT: '3007', NODE_ENV: 'development' }
+      });
+
+      app.on('before-quit', () => {
+        log.info('Terminating backend process...');
+        backendProcess.kill();
       });
     }
   }

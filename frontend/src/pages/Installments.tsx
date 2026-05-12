@@ -103,12 +103,13 @@ export default function Installments() {
       });
     }
 
-    return data;
+    return data.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
   }, [tab, installments, overdue, search, statusFilter]);
 
   const stats = useMemo(() => {
     const unpaid = filteredData.filter(i => !i.isPaid);
-    const totalOverdue = unpaid.reduce((sum, i) => sum + (Number(i.amount) - Number(i.paidAmount)), 0);
+    const overdueItems = unpaid.filter(i => isOverdue(i.dueDate));
+    const totalOverdue = overdueItems.reduce((sum, i) => sum + (Number(i.amount) - Number(i.paidAmount)), 0);
     const uniqueCustomers = new Set(filteredData.map(i => i.sale?.customerId).filter(Boolean)).size;
     return {
       overdueAmount: Math.round(totalOverdue),
@@ -349,9 +350,21 @@ export default function Installments() {
                           </td>
                           <td className="px-4 py-2 font-bold">{formatCurrency(inst.amount)}</td>
                           <td className="px-4 py-2">
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${inst.isPaid ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                              {inst.isPaid ? ar.installments.paid : ar.installments.unpaid}
-                            </span>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {isOverdueStatus && (
+                                <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-red-100 text-red-700">
+                                  {ar.installments.overdue}
+                                </span>
+                              )}
+                              {!inst.isPaid && isDueToday(inst.dueDate) && !isOverdueStatus && (
+                                <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-orange-100 text-orange-700">
+                                  {ar.installments.dueToday}
+                                </span>
+                              )}
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${inst.isPaid ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                                {inst.isPaid ? ar.installments.paid : ar.installments.unpaid}
+                              </span>
+                            </div>
                           </td>
                           <td className="px-4 py-2 text-center">
                             {!inst.isPaid && (
