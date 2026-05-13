@@ -24,21 +24,37 @@ router.post('/database/reset', async (req: Request, res: Response) => {
     }
 
     // Perform database reset (Wipe sensitive data but keep structure)
-    // For a total reset, we can truncate tables
     console.log('MFA Verified. Resetting database...');
 
-    await prisma.$transaction([
-      prisma.payment.deleteMany(),
-      prisma.installment.deleteMany(),
-      prisma.machineSale.deleteMany(),
-      prisma.followUp.deleteMany(),
-      prisma.customer.deleteMany(),
-    ]);
+    try {
+      // Delete in strict dependency order
+      console.log('Clearing Payments...');
+      await prisma.payment.deleteMany();
+      
+      console.log('Clearing Installments...');
+      await prisma.installment.deleteMany();
+      
+      console.log('Clearing Sales...');
+      await prisma.machineSale.deleteMany();
+      
+      console.log('Clearing Follow-ups...');
+      await prisma.followUp.deleteMany();
+      
+      console.log('Clearing Customers...');
+      await prisma.customer.deleteMany();
 
-    res.json({ message: 'Database resetted successfully' });
-  } catch (error) {
+      console.log('Database reset complete.');
+      res.json({ message: 'تم تصفير قاعدة البيانات بنجاح' });
+    } catch (dbError: any) {
+      console.error('Database deletion failed:', dbError);
+      throw dbError;
+    }
+  } catch (error: any) {
     console.error('Reset failed:', error);
-    res.status(500).json({ error: 'Failed to reset database' });
+    res.status(500).json({ 
+      error: 'فشل في تصفير قاعدة البيانات',
+      details: error?.message 
+    });
   }
 });
 
