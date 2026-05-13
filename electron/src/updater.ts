@@ -1,11 +1,10 @@
-import { app, dialog, shell, BrowserWindow } from 'electron';
+import { app, dialog, BrowserWindow } from 'electron';
 import https from 'https';
 import log from 'electron-log';
 import fs from 'fs';
 import path from 'path';
 import { exec } from 'child_process';
-import axios from 'axios';
-import extractZip from 'extract-zip';
+
 const GITHUB_OWNER = 'mkamel30';
 const GITHUB_REPO = 'Smart_Murabha';
 const CURRENT_VERSION = app.getVersion();
@@ -115,6 +114,70 @@ function updateStatus(win: BrowserWindow, text: string) {
   }
 }
 
+/**
+ * Download file using https with redirect support.
+ * GitHub download URLs redirect (302), so we follow them manually.
+ */
+function downloadFile(url: string, destPath: string, win: BrowserWindow): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const file = fs.createWriteStream(destPath);
+    
+    const doGet = (currentUrl: string) => {
+      const parsedUrl = new URL(currentUrl);
+      const options = {
+        hostname: parsedUrl.hostname,
+        path: parsedUrl.pathname + parsedUrl.search,
+        headers: { 'User-Agent': 'Smart-Murabha-Updater' }
+      };
+
+      https.get(options, (res) => {
+        // Follow redirects
+        if (res.statusCode === 302 || res.statusCode === 301) {
+          const redirectUrl = res.headers.location;
+          if (redirectUrl) {
+            log.info(`[Updater] Redirecting to: ${redirectUrl.substring(0, 80)}...`);
+            doGet(redirectUrl);
+            return;
+          }
+        }
+
+        if (res.statusCode !== 200) {
+          reject(new Error(`Download failed with status ${res.statusCode}`));
+          return;
+        }
+
+        const totalBytes = parseInt(res.headers['content-length'] || '0', 10);
+        let downloadedBytes = 0;
+
+        res.on('data', (chunk) => {
+          downloadedBytes += chunk.length;
+          if (totalBytes > 0) {
+            const percent = Math.round((downloadedBytes / totalBytes) * 100);
+            updateProgress(win, percent);
+          }
+        });
+
+        res.pipe(file);
+
+        file.on('finish', () => {
+          file.close();
+          resolve();
+        });
+
+        file.on('error', (err) => {
+          fs.unlinkSync(destPath);
+          reject(err);
+        });
+      }).on('error', (err) => {
+        fs.unlinkSync(destPath);
+        reject(err);
+      });
+    };
+
+    doGet(url);
+  });
+}
+
 export async function checkForUpdates(manual = false): Promise<void> {
   try {
     log.info('Checking for updates...');
@@ -133,7 +196,7 @@ export async function checkForUpdates(manual = false): Promise<void> {
       });
 
       if (result.response === 0) {
-        log.info('Starting in-process automated update...');
+        log.info('Starting update process...');
         const asset = release.assets.find(a => a.name.endsWith('-win.zip'));
         if (!asset) {
           throw new Error('لم يتم العثور على ملف التحديث (ZIP) في الإصدار.');
@@ -143,72 +206,80 @@ export async function checkForUpdates(manual = false): Promise<void> {
         
         const tempDir = app.getPath('temp');
         const zipPath = path.join(tempDir, 'murabha_update.zip');
-        const extractPath = path.join(tempDir, 'murabha_update_extracted');
+        const targetDir = path.dirname(app.getPath('exe'));
 
-        log.info(`Downloading update from ${asset.browser_download_url} to ${zipPath}`);
+        log.info(`[Updater] Download URL: ${asset.browser_download_url}`);
+        log.info(`[Updater] ZIP Path: ${zipPath}`);
+        log.info(`[Updater] Target Dir: ${targetDir}`);
         
         try {
-          const response = await axios({
-            method: 'GET',
-            url: asset.browser_download_url,
-            responseType: 'stream',
-            onDownloadProgress: (progressEvent) => {
-              if (progressEvent.total) {
-                const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-                updateProgress(win, percent);
-              }
-            }
-          });
-
-          const writer = fs.createWriteStream(zipPath);
-          response.data.pipe(writer);
-
-          await new Promise<void>((resolve, reject) => {
-            writer.on('finish', () => resolve());
-            writer.on('error', reject);
-          });
-
-          log.info('Download complete. Extracting...');
-          updateStatus(win, 'جاري فك الضغط... يرجى الانتظار (قد يستغرق بضع ثوان)');
-
-          // Clean up old extraction dir if exists
-          if (fs.existsSync(extractPath)) {
-            fs.rmSync(extractPath, { recursive: true, force: true });
-          }
+          // Step 1: Download the ZIP
+          await downloadFile(asset.browser_download_url, zipPath, win);
           
-          await extractZip(zipPath, { dir: extractPath });
-          
-          log.info('Extraction complete. Preparing update script...');
+          log.info(`[Updater] Download complete. ZIP size: ${fs.statSync(zipPath).size} bytes`);
           updateStatus(win, 'جاري تطبيق التحديث...');
 
-          // Generate simple batch script
-          const batPath = path.join(tempDir, 'apply_murabha_update.bat');
-          const targetDir = path.dirname(app.getPath('exe'));
+          // Step 2: Generate a PowerShell update script
+          // PowerShell handles ZIP extraction natively (no extract-zip dependency issues)
+          // and can overwrite the running exe after it quits
+          const ps1Path = path.join(tempDir, 'apply_murabha_update.ps1');
           
-          const batContent = `@echo off
-chcp 65001 > nul
-echo جاري تثبيت التحديث... يرجى عدم إغلاق هذه النافذة.
-timeout /t 3 /nobreak > nul
-xcopy /s /e /y "${extractPath}\\*" "${targetDir}\\"
-start "" "${targetDir}\\Smart_Murabha.exe"
-del "${zipPath}"
-rmdir /s /q "${extractPath}"
-del "%~f0"
+          const ps1Content = `
+# Smart Murabha Auto-Update Script
+$ErrorActionPreference = "Stop"
+$zipPath = "${zipPath.replace(/\\/g, '\\\\')}"
+$targetDir = "${targetDir.replace(/\\/g, '\\\\')}"
+$exeName = "Smart_Murabha.exe"
+$exePath = Join-Path $targetDir $exeName
+
+Write-Host "Waiting for application to close..." -ForegroundColor Cyan
+Start-Sleep -Seconds 3
+
+# Kill the process if still running
+Stop-Process -Name "Smart_Murabha" -ErrorAction SilentlyContinue
+Start-Sleep -Seconds 2
+
+Write-Host "Extracting update to $targetDir..." -ForegroundColor Yellow
+try {
+    Expand-Archive -Path $zipPath -DestinationPath $targetDir -Force
+    Write-Host "Update applied successfully!" -ForegroundColor Green
+} catch {
+    Write-Host "ERROR: $($_.Exception.Message)" -ForegroundColor Red
+    pause
+    exit 1
+}
+
+# Clean up
+Remove-Item $zipPath -ErrorAction SilentlyContinue
+
+# Restart the application
+if (Test-Path $exePath) {
+    Write-Host "Starting application..." -ForegroundColor Green
+    Start-Process -FilePath $exePath -WorkingDirectory $targetDir
+} else {
+    Write-Host "WARNING: Could not find $exePath" -ForegroundColor Yellow
+}
+
+Start-Sleep -Seconds 2
 `;
-          fs.writeFileSync(batPath, batContent);
+          fs.writeFileSync(ps1Path, ps1Content, 'utf-8');
           
-          log.info('Update script generated. Quitting app to apply...');
+          log.info('[Updater] Update script created. Quitting app...');
           
-          exec(`start "" "${batPath}"`, (error) => {
+          // Run the PowerShell script and quit
+          exec(`powershell -ExecutionPolicy Bypass -File "${ps1Path}"`, (error) => {
             if (error) {
-              log.error('Failed to run update script:', error);
+              log.error('[Updater] Failed to run update script:', error);
             }
           });
-          
-          app.quit();
+
+          // Give it a moment to start, then quit
+          setTimeout(() => {
+            app.quit();
+          }, 1000);
           
         } catch (downloadErr: any) {
-          log.error('Update process failed:', downloadErr);
+          log.error('[Updater] Update process failed:', downloadErr);
           if (win && !win.isDestroyed()) win.close();
           dialog.showErrorBox('خطأ في التحديث', `فشل في تحميل أو تطبيق التحديث:\n${downloadErr.message || downloadErr}`);
         }
