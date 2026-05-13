@@ -94,15 +94,31 @@ runMigrations(prisma).catch(err => {
 app.get('/api/health', async (req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
+    
+    // Extra diagnostics
+    let tableCount = 0;
+    let dbUrl = process.env.DATABASE_URL || 'NOT SET';
+    try {
+      const tables = await prisma.$queryRawUnsafe<any[]>(
+        `SELECT COUNT(*) as cnt FROM sqlite_master WHERE type='table' AND name NOT LIKE '_prisma%' AND name NOT LIKE 'sqlite%';`
+      );
+      tableCount = tables[0]?.cnt || 0;
+    } catch {}
+    
     res.json({ 
       status: 'ok', 
       db: 'connected', 
+      dbPath: dbUrl,
+      tables: tableCount,
       timestamp: new Date().toISOString() 
     });
-  } catch (error) {
+  } catch (error: any) {
+    console.error('[Health] DB check failed:', error?.message);
     res.status(503).json({ 
       status: 'error', 
-      db: 'disconnected', 
+      db: 'disconnected',
+      dbPath: process.env.DATABASE_URL || 'NOT SET',
+      error: error?.message,
       timestamp: new Date().toISOString() 
     });
   }

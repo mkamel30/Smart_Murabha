@@ -86,6 +86,29 @@ async function startBackend() {
   process.env.DATABASE_URL = `file:${formattedDbPath}`;
   process.env.SERVE_FRONTEND = 'true'; // Allow network access
 
+  // === CRITICAL: Log and verify database ===
+  log.info(`=== DATABASE DIAGNOSTICS ===`);
+  log.info(`DB Path (raw): ${dbPath}`);
+  log.info(`DB Path (formatted): ${formattedDbPath}`);
+  log.info(`DATABASE_URL: ${process.env.DATABASE_URL}`);
+  
+  if (fs.existsSync(dbPath)) {
+    const stats = fs.statSync(dbPath);
+    log.info(`DB File EXISTS - Size: ${stats.size} bytes, Modified: ${stats.mtime.toISOString()}`);
+  } else {
+    log.error(`❌ DB File DOES NOT EXIST at: ${dbPath}`);
+    log.info(`Attempting to find database elsewhere...`);
+    // List what IS in the data directory
+    const dataDir = path.dirname(dbPath);
+    if (fs.existsSync(dataDir)) {
+      const files = fs.readdirSync(dataDir);
+      log.info(`Files in ${dataDir}: ${files.join(', ') || '(empty)'}`);
+    } else {
+      log.error(`Data directory also doesn't exist: ${dataDir}`);
+    }
+  }
+  log.info(`============================`);
+
   if (app.isPackaged) {
     process.env.FRONTEND_DIST = path.join(process.resourcesPath, 'frontend');
   } else {
