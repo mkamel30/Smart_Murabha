@@ -12,32 +12,42 @@ const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
 const getDbPath = () => {
-  // Always try to find the actual dev.db file
-  const rootDir = path.resolve(_dirname, '..', '..');
-  
-  const locations: string[] = [];
-  
-  if (process.env.DATABASE_URL && process.env.DATABASE_URL.startsWith('file:')) {
-    locations.push(path.resolve(process.env.DATABASE_URL.replace('file:', '')));
+  // 1. Use env var set by Electron main process
+  if (process.env.APP_DB_PATH && fs.existsSync(process.env.APP_DB_PATH)) {
+    return process.env.APP_DB_PATH;
   }
-  
-  locations.push(
+
+  // 2. Parse from DATABASE_URL
+  if (process.env.DATABASE_URL && process.env.DATABASE_URL.startsWith('file:')) {
+    const parsed = path.resolve(process.env.DATABASE_URL.replace('file:', ''));
+    if (fs.existsSync(parsed)) return parsed;
+  }
+
+  // 3. Fallback: search common locations
+  const rootDir = path.resolve(_dirname, '..', '..');
+  const locations = [
     path.join(rootDir, 'prisma', 'dev.db'),
     path.join(process.cwd(), 'prisma', 'dev.db'),
     path.join(process.cwd(), 'backend', 'prisma', 'dev.db'),
-    path.join(process.cwd(), 'dev.db'),
-    path.join(process.cwd(), 'resources', 'backend', 'prisma', 'dev.db')
-  );
+    path.join(process.cwd(), 'data', 'dev.db'),
+  ];
 
   for (const loc of locations) {
-    if (fs.existsSync(loc)) {
-      return loc;
-    }
+    if (fs.existsSync(loc)) return loc;
   }
-  return locations[0]; // Fallback to first one
+  return locations[0];
 };
 
 const getBackupDir = () => {
+  // 1. Use env var set by Electron main process
+  if (process.env.APP_BACKUP_DIR) {
+    if (!fs.existsSync(process.env.APP_BACKUP_DIR)) {
+      fs.mkdirSync(process.env.APP_BACKUP_DIR, { recursive: true });
+    }
+    return process.env.APP_BACKUP_DIR;
+  }
+
+  // 2. Fallback: alongside the database
   const dbPath = getDbPath();
   const dir = path.join(path.dirname(dbPath), '..', 'backups');
   if (!fs.existsSync(dir)) {

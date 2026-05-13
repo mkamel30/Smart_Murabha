@@ -754,6 +754,117 @@ export class ExportService {
     res.setHeader('Content-Disposition', `inline; filename=statement-${customer.bkCode}.html`);
     res.send(html);
   }
+
+  // Export all data in the same format as the import template
+  async exportFullTemplate() {
+    const sales = await prisma.machineSale.findMany({
+      where: { status: { not: 'VOIDED' } },
+      include: {
+        customer: true,
+        installments: { orderBy: { installmentNo: 'asc' } },
+        payments: { orderBy: { paidAt: 'desc' } },
+      },
+      orderBy: { saleDate: 'desc' },
+    });
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('بيانات كاملة');
+
+    // === Same columns as import template + extras ===
+    worksheet.columns = [
+      // Template columns (re-importable)
+      { header: 'كود العميل', key: 'bkCode', width: 15 },
+      { header: 'نوع العميل', key: 'customerType', width: 15 },
+      { header: 'اسم العميل', key: 'customerName', width: 25 },
+      { header: 'السيريال', key: 'machineSerial', width: 20 },
+      { header: 'تاريخ البيع القديم', key: 'saleDate', width: 18 },
+      { header: 'إجمالي قيمة العقد', key: 'totalPrice', width: 18 },
+      { header: 'إجمالي الأقساط المحصلة', key: 'paidInstallments', width: 22 },
+      { header: 'المقدم', key: 'downPayment', width: 15 },
+      { header: 'عدد الأقساط', key: 'months', width: 14 },
+      { header: 'قيمة القسط الشهري', key: 'monthlyInstallment', width: 18 },
+      { header: 'تاريخ آخر قسط مدفوع', key: 'lastPaymentDate', width: 20 },
+      { header: 'ملاحظات', key: 'notes', width: 25 },
+      // Extra columns
+      { header: 'الحالة', key: 'status', width: 12 },
+      { header: 'المتبقي', key: 'remainingAmount', width: 15 },
+      { header: 'تاريخ أول قسط', key: 'firstDueDate', width: 18 },
+      { header: 'عدد المتأخرات', key: 'overdueCount', width: 14 },
+      { header: 'رقم العقد', key: 'receiptNumber', width: 20 },
+      { header: 'نوع البيع', key: 'saleType', width: 12 },
+    ];
+
+    // Style the header row
+    const headerRow = worksheet.getRow(1);
+    headerRow.font = { bold: true, size: 11 };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE8F4FD' },
+    };
+    headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
+    headerRow.height = 25;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    for (const sale of sales) {
+      // Calculate paid installments (excluding down payment)
+      const downPaymentTotal = sale.payments
+        .filter(p => p.paymentType === 'DOWN_PAYMENT')
+        .reduce((sum, p) => sum + Number(p.amount), 0);
+      
+      const installmentPayments = Number(sale.paidAmount) - downPaymentTotal;
+
+      // Monthly installment amount
+      const monthlyAmt = sale.saleType === 'INSTALLMENT' && sale.months > 0
+        ? Math.round(((Number(sale.totalPrice) - Number(sale.downPayment)) / sale.months) * 100) / 100
+        : 0;
+
+      // Last payment date
+      const lastPayment = sale.payments.length > 0 ? sale.payments[0] : null;
+
+      // Overdue count
+      const overdueCount = sale.installments
+        .filter(i => !i.isPaid && new Date(i.dueDate) < today)
+        .length;
+
+      worksheet.addRow({
+        bkCode: sale.customer.bkCode,
+        customerType: sale.customer.customerType || 'عام',
+        customerName: sale.customer.name,
+        machineSerial: sale.machineSerial,
+        saleDate: formatDate(sale.saleDate),
+        totalPrice: Number(sale.totalPrice),
+        paidInstallments: Math.max(0, Math.round(installmentPayments)),
+        downPayment: Number(sale.downPayment),
+        months: sale.months || 0,
+        monthlyInstallment: monthlyAmt,
+        lastPaymentDate: lastPayment ? formatDate(lastPayment.paidAt) : '',
+        notes: sale.notes || '',
+        status: sale.status === 'ACTIVE' ? 'نشط' : sale.status === 'COMPLETED' ? 'مكتمل' : sale.status,
+        remainingAmount: Number(sale.remainingAmount),
+        firstDueDate: sale.firstDueDate ? formatDate(sale.firstDueDate) : '',
+        overdueCount: overdueCount,
+        receiptNumber: sale.receiptNumber,
+        saleType: sale.saleType === 'CASH' ? 'كاش' : 'أقساط',
+      });
+    }
+
+    // Auto-filter
+    worksheet.autoFilter = {
+      from: { row: 1, column: 1 },
+      to: { row: 1, column: 18 },
+    };
+
+    // Number formatting for money columns
+    ['totalPrice', 'paidInstallments', 'downPayment', 'monthlyInstallment', 'remainingAmount'].forEach(key => {
+      const col = worksheet.getColumn(key);
+      col.numFmt = '#,##0';
+    });
+
+    return workbook;
+  }
 }
 
 function getPaymentPlaceLabel(place: string | null | undefined): string {

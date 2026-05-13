@@ -76,4 +76,18 @@ router.get('/statement/:customerId', async (req: Request, res: Response, next: N
   }
 });
 
+// Full data export matching import template format
+router.get('/full', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const workbook = await exportService.exportFullTemplate();
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    const dateStr = new Date().toISOString().split('T')[0];
+    res.setHeader('Content-Disposition', `attachment; filename=murabha-full-export-${dateStr}.xlsx`);
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

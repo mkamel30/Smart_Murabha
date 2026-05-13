@@ -100,6 +100,8 @@ export const exportApi = {
     api.get('/export/collections', { params, responseType: 'blob' }).then(r => r.data),
   overdue: (params: { startDate?: string; endDate?: string } = {}) => 
     api.get('/export/overdue', { params, responseType: 'blob' }).then(r => r.data),
+  full: () => 
+    api.get('/export/full', { responseType: 'blob' }).then(r => r.data),
   receipt: (paymentId: string) => 
     api.get(`/export/receipt/${paymentId}`).then(r => r.data),
   contract: (saleId: string) => 

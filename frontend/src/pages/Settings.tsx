@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
-import { backupApi, adminApi, branchApi } from '@/api/client';
+import { backupApi, adminApi, branchApi, exportApi } from '@/api/client';
 import { PageHeader, PrimaryButton } from '@/lib/Actions';
 import { useToast } from '@/lib/toast';
-import { Settings, Download, Upload, RefreshCw, Trash2, Lock, ShieldCheck, Building2, FileJson } from 'lucide-react';
+import { Settings, Download, Upload, RefreshCw, Trash2, Lock, ShieldCheck, Building2, FileJson, FileSpreadsheet } from 'lucide-react';
 
 interface BackupFile {
   name: string;
@@ -188,6 +188,27 @@ export default function SettingsPage() {
 
 
 
+  const handleFullExport = async () => {
+    setLoading(true);
+    try {
+      const data = await exportApi.full();
+      const url = window.URL.createObjectURL(new Blob([data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `murabha-full-export-${new Date().toISOString().split('T')[0]}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      showToast('تم تصدير البيانات الكاملة بنجاح', 'success');
+    } catch (err) {
+      console.error('Full export failed:', err);
+      showToast('فشل تصدير البيانات', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleCheckUpdates = async () => {
     if (window.electronAPI?.checkForUpdates) {
       setLoading(true);
@@ -299,6 +320,26 @@ export default function SettingsPage() {
               <p className="text-xs text-amber-600 mt-3">⚠️ يجب إدخال اسم الفرع أولاً لتتمكن من التصدير</p>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Full Data Export */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <FileSpreadsheet className="w-5 h-5 text-[#0A2472]" />
+          <h2 className="text-lg font-semibold">تصدير البيانات الكاملة (Excel)</h2>
+        </div>
+        <div className="flex items-center justify-between p-4 bg-emerald-50/50 border border-emerald-100 rounded-lg">
+          <div>
+            <h3 className="font-medium text-emerald-900">تصدير كل البيانات</h3>
+            <p className="text-sm text-emerald-700 mt-1">
+              ملف Excel يطابق تمبليت الاستيراد + تفاصيل إضافية (الحالة، المتبقي، المتأخرات)
+            </p>
+          </div>
+          <PrimaryButton onClick={handleFullExport} disabled={loading}>
+            <Download size={16} className="ml-2" />
+            تصدير Excel
+          </PrimaryButton>
         </div>
       </div>
 
