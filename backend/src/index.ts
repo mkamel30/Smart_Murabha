@@ -96,8 +96,8 @@ runMigrations(prisma).catch(err => {
 
 app.get('/api/health', async (req, res) => {
   try {
-    // Use executeRaw to avoid BigInt serialization issues
-    await prisma.$executeRawUnsafe('SELECT 1');
+    // queryRawUnsafe works now thanks to BigInt.toJSON polyfill
+    await prisma.$queryRawUnsafe('SELECT 1');
     
     // Extra diagnostics
     let tableCount = 0;
