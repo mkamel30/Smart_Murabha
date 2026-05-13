@@ -88,11 +88,17 @@ app.use('/api/branch', branchRouter);
 
 import prisma from './lib/prisma.js';
 import { runMigrations } from './migrator.js';
+import { ensureTablesExist } from './dbInit.js';
 
-// Run migrations before starting the server
-runMigrations(prisma).catch(err => {
-  console.error('Migration failed during startup:', err);
-});
+// Run migrations and ensure tables exist before starting the server
+(async () => {
+  try {
+    await ensureTablesExist(prisma);
+    await runMigrations(prisma);
+  } catch (err) {
+    console.error('Database initialization failed:', err);
+  }
+})();
 
 app.get('/api/health', async (req, res) => {
   try {
