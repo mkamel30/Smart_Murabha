@@ -207,10 +207,10 @@ del "%~f0"
           
           app.quit();
           
-        } catch (downloadErr) {
+        } catch (downloadErr: any) {
           log.error('Update process failed:', downloadErr);
-          win.close();
-          dialog.showErrorBox('خطأ في التحديث', 'فشل في تحميل أو تطبيق التحديث. يرجى التحقق من اتصالك بالإنترنت.');
+          if (win && !win.isDestroyed()) win.close();
+          dialog.showErrorBox('خطأ في التحديث', `فشل في تحميل أو تطبيق التحديث:\n${downloadErr.message || downloadErr}`);
         }
       }
     } else if (manual) {

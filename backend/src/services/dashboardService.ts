@@ -1,6 +1,16 @@
 import prisma from '../lib/prisma.js';
 import { startOfDay, endOfDay } from '../utils/helpers.js';
 
+// Safe wrapper: if a query fails, return a fallback instead of crashing everything
+async function safe<T>(promise: Promise<T>, fallback: T): Promise<T> {
+  try {
+    return await promise;
+  } catch (err) {
+    console.error('[DashboardService] Query failed, using fallback:', err);
+    return fallback;
+  }
+}
+
 export class DashboardService {
   async getStats() {
     const today = new Date();
@@ -11,6 +21,7 @@ export class DashboardService {
     const todayStart = startOfDay(today);
     const todayEnd = endOfDay(today);
 
+    // Each query is individually wrapped so a single failure won't crash the dashboard
     const [
       todayPayments,
       overdueInstallments,
@@ -24,47 +35,47 @@ export class DashboardService {
       upcomingDue,
       dueThisMonth
     ] = await Promise.all([
-      prisma.payment.findMany({
+      safe(prisma.payment.findMany({
         where: { 
           paidAt: { gte: todayStart, lte: todayEnd },
           sale: { status: { not: 'VOIDED' } }
         },
         include: { sale: { include: { customer: true } } },
-      }),
-      prisma.installment.findMany({
+      }), []),
+      safe(prisma.installment.findMany({
         where: { 
           isPaid: false, 
           dueDate: { lt: today },
           sale: { status: 'ACTIVE' }
         },
         include: { sale: { include: { customer: true } } },
-      }),
-      prisma.machineSale.aggregate({
+      }), []),
+      safe(prisma.machineSale.aggregate({
         where: { saleType: 'CASH', status: { in: ['ACTIVE', 'COMPLETED'] } },
         _sum: { totalPrice: true },
-      }),
-      prisma.machineSale.aggregate({
+      }), { _sum: { totalPrice: null }, _count: 0, _avg: { totalPrice: null }, _min: { totalPrice: null }, _max: { totalPrice: null } } as any),
+      safe(prisma.machineSale.aggregate({
         where: { saleType: 'INSTALLMENT', status: { in: ['ACTIVE', 'COMPLETED'] } },
         _sum: { totalPrice: true },
-      }),
-      prisma.machineSale.count({
+      }), { _sum: { totalPrice: null }, _count: 0, _avg: { totalPrice: null }, _min: { totalPrice: null }, _max: { totalPrice: null } } as any),
+      safe(prisma.machineSale.count({
         where: { status: { in: ['ACTIVE', 'COMPLETED'] } },
-      }),
-      prisma.payment.aggregate({ 
+      }), 0),
+      safe(prisma.payment.aggregate({ 
         where: { sale: { status: { not: 'VOIDED' } } },
         _sum: { amount: true } 
-      }),
-      prisma.machineSale.aggregate({
+      }), { _sum: { amount: null }, _count: 0, _avg: { amount: null }, _min: { amount: null }, _max: { amount: null } } as any),
+      safe(prisma.machineSale.aggregate({
         where: { status: { in: ['ACTIVE', 'COMPLETED'] } },
         _sum: { remainingAmount: true },
-      }),
-      prisma.customer.count(),
-      prisma.payment.findMany({
+      }), { _sum: { remainingAmount: null }, _count: 0, _avg: { remainingAmount: null }, _min: { remainingAmount: null }, _max: { remainingAmount: null } } as any),
+      safe(prisma.customer.count(), 0),
+      safe(prisma.payment.findMany({
         where: { sale: { status: { not: 'VOIDED' } } },
         orderBy: { paidAt: 'desc' }, take: 10,
         include: { sale: { include: { customer: true } } },
-      }),
-      prisma.installment.findMany({
+      }), []),
+      safe(prisma.installment.findMany({
         where: { 
           isPaid: false, 
           dueDate: { gte: today, lte: tomorrow },
@@ -72,15 +83,15 @@ export class DashboardService {
         },
         include: { sale: { include: { customer: true } } },
         orderBy: { dueDate: 'asc' }, take: 10,
-      }),
-      prisma.installment.findMany({
+      }), []),
+      safe(prisma.installment.findMany({
         where: {
           isPaid: false,
           dueDate: { gte: todayStart, lte: new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999) },
           sale: { status: 'ACTIVE' }
         },
         include: { sale: { include: { customer: true } } },
-      })
+      }), [])
     ]);
 
     const todayCollections = Math.round(todayPayments.reduce((sum, p) => sum + Number(p.amount), 0));

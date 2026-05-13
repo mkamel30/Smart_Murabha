@@ -8,7 +8,9 @@ router.get('/stats', async (req: Request, res: Response, next: NextFunction) => 
   try {
     const stats = await dashboardService.getStats();
     res.json(stats);
-  } catch (error) {
+  } catch (error: any) {
+    console.error('[Dashboard /stats] CRITICAL ERROR:', error?.message || error);
+    console.error('[Dashboard /stats] Stack:', error?.stack);
     next(error);
   }
 });
