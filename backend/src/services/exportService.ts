@@ -817,8 +817,9 @@ export class ExportService {
       const installmentPayments = Number(sale.paidAmount) - downPaymentTotal;
 
       // Monthly installment amount
-      const monthlyAmt = sale.saleType === 'INSTALLMENT' && sale.months > 0
-        ? Math.round(((Number(sale.totalPrice) - Number(sale.downPayment)) / sale.months) * 100) / 100
+      const months = sale.months || 0;
+      const monthlyAmt = sale.saleType === 'INSTALLMENT' && months > 0
+        ? Math.round(((Number(sale.totalPrice) - Number(sale.downPayment)) / months) * 100) / 100
         : 0;
 
       // Last payment date
