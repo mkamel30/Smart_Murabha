@@ -9,6 +9,9 @@ import { fileURLToPath } from 'url';
 
 config();
 
+// Fix BigInt JSON serialization (Prisma + SQLite returns BigInt for counts/aggregates)
+(BigInt.prototype as any).toJSON = function () { return Number(this); };
+
 import customersRouter from './routes/customers.js';
 import salesRouter from './routes/sales.js';
 import installmentsRouter from './routes/installments.js';
@@ -93,16 +96,17 @@ runMigrations(prisma).catch(err => {
 
 app.get('/api/health', async (req, res) => {
   try {
-    await prisma.$queryRaw`SELECT 1`;
+    // Use executeRaw to avoid BigInt serialization issues
+    await prisma.$executeRawUnsafe('SELECT 1');
     
     // Extra diagnostics
     let tableCount = 0;
-    let dbUrl = process.env.DATABASE_URL || 'NOT SET';
+    const dbUrl = process.env.DATABASE_URL || 'NOT SET';
     try {
       const tables = await prisma.$queryRawUnsafe<any[]>(
         `SELECT COUNT(*) as cnt FROM sqlite_master WHERE type='table' AND name NOT LIKE '_prisma%' AND name NOT LIKE 'sqlite%';`
       );
-      tableCount = tables[0]?.cnt || 0;
+      tableCount = Number(tables[0]?.cnt) || 0;
     } catch {}
     
     res.json({ 
