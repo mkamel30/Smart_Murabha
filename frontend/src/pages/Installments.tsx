@@ -224,6 +224,7 @@ export default function Installments() {
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="px-4 py-3 text-right text-xs font-bold text-gray-500">{ar.customers.title}</th>
+                  <th className="px-4 py-3 text-right text-xs font-bold text-gray-500">رقم الماكينة</th>
                   <th className="px-4 py-3 text-right text-xs font-bold text-gray-500">{ar.installments.installmentNo}</th>
                   <th className="px-4 py-3 text-right text-xs font-bold text-gray-500">{ar.installments.dueDate}</th>
                   <th className="px-4 py-3 text-left text-xs font-bold text-gray-500">{ar.installments.amount}</th>
@@ -242,6 +243,7 @@ export default function Installments() {
                       <td className="px-4 py-3">
                         <span className="font-medium">{inst.sale?.customer?.name} ({inst.sale?.customer?.bkCode})</span>
                       </td>
+                      <td className="px-4 py-3 text-xs font-mono">{inst.sale?.machineSerial || '-'}</td>
                       <td className="px-4 py-3">{inst.installmentNo}</td>
                       <td className="px-4 py-3">
                         <span className={isOverdueStatus ? 'text-red-600 font-bold' : isDueTodayStatus ? 'text-orange-600 font-bold' : ''}>
@@ -320,8 +322,10 @@ export default function Installments() {
                   <thead className="bg-slate-50/50">
                     <tr>
                       <th className="px-4 py-2 text-right text-xs text-slate-500">القسط</th>
-                      {groupBy === 'month' && (
+                      {groupBy === 'month' ? (
                         <th className="px-4 py-2 text-right text-xs text-slate-500">العميل / الماكينة</th>
+                      ) : (
+                        <th className="px-4 py-2 text-right text-xs text-slate-500">رقم الماكينة</th>
                       )}
                       <th className="px-4 py-2 text-right text-xs text-slate-500">تاريخ الاستحقاق</th>
                       <th className="px-4 py-2 text-right text-xs text-slate-500">المبلغ</th>
@@ -335,13 +339,15 @@ export default function Installments() {
                        return (
                         <tr key={inst.id} className={`hover:bg-slate-50 ${isOverdueStatus ? 'bg-red-50/30' : ''}`}>
                           <td className="px-4 py-2 font-medium">قسط {inst.installmentNo}</td>
-                          {groupBy === 'month' && (
+                          {groupBy === 'month' ? (
                             <td className="px-4 py-2">
                               <div className="flex flex-col">
-                                <span className="font-bold text-slate-800 text-xs">{inst.sale?.customer?.name}</span>
+                                <span className="font-bold text-slate-800 text-xs">{inst.sale?.customer?.name} ({inst.sale?.customer?.bkCode})</span>
                                 <span className="text-[9px] text-slate-500 font-mono tracking-tight">{inst.sale?.machineSerial || '-'}</span>
                               </div>
                             </td>
+                          ) : (
+                            <td className="px-4 py-2 text-xs font-mono">{inst.sale?.machineSerial || '-'}</td>
                           )}
                           <td className="px-4 py-2">
                              <span className={isOverdueStatus ? 'text-red-600 font-bold' : ''}>

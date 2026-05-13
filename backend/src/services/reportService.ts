@@ -7,8 +7,8 @@ export class ReportService {
     const where: Prisma.MachineSaleWhereInput = { status: { not: 'VOIDED' } };
     if (startDate || endDate) {
       where.saleDate = {};
-      if (startDate) where.saleDate.gte = startDate;
-      if (endDate) where.saleDate.lte = endDate;
+      if (startDate) where.saleDate.gte = startOfDay(startDate);
+      if (endDate) where.saleDate.lte = endOfDay(endDate);
     }
     if (saleType) {
       where.saleType = saleType as any;
@@ -38,8 +38,8 @@ export class ReportService {
     };
     if (startDate || endDate) {
       where.paidAt = {};
-      if (startDate) where.paidAt.gte = startDate;
-      if (endDate) where.paidAt.lte = endDate;
+      if (startDate) where.paidAt.gte = startOfDay(startDate);
+      if (endDate) where.paidAt.lte = endOfDay(endDate);
     }
     if (paymentType) {
       where.paymentType = paymentType as any;
@@ -76,8 +76,8 @@ export class ReportService {
 
     if (startDate || endDate) {
       where.dueDate = {};
-      if (startDate) where.dueDate.gte = startDate;
-      if (endDate) where.dueDate.lte = endDate;
+      if (startDate) where.dueDate.gte = startOfDay(startDate);
+      if (endDate) where.dueDate.lte = endOfDay(endDate);
     } else {
       where.dueDate = { lt: today };
     }
@@ -144,10 +144,8 @@ export class ReportService {
   }
 
   async monthClosingReport(year: number, month: number) {
-    const startOfMonth = new Date(year, month - 1, 1);
+    const startOfMonth = new Date(year, month - 1, 1, 0, 0, 0, 0);
     const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
-    const today = new Date();
-    today.setHours(23, 59, 59, 999);
 
     const salesInMonth = await prisma.machineSale.findMany({
       where: {
@@ -182,7 +180,7 @@ export class ReportService {
     });
 
     const activeSales = await prisma.machineSale.findMany({
-      where: { status: 'ACTIVE' },
+      where: { status: { in: ['ACTIVE', 'COMPLETED'] } },
     });
 
     return {
@@ -210,4 +208,5 @@ export class ReportService {
       }
     };
   }
+}
 }
