@@ -21,6 +21,13 @@ const MIGRATIONS: Migration[] = [
       `CREATE INDEX IF NOT EXISTS idx_customer_bkcode ON Customer(bkCode);`,
       `CREATE INDEX IF NOT EXISTS idx_customer_type ON Customer(customerType);`,
     ]
+  },
+  {
+    version: '1.0.2',
+    description: 'إضافة حقل الإدارة (Department)',
+    sql: [
+      `ALTER TABLE Customer ADD COLUMN department TEXT;`
+    ]
   }
 ];
 
