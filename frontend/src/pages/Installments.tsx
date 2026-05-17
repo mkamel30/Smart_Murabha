@@ -57,7 +57,7 @@ export default function Installments() {
     try {
       await salesApi.pay(selectedInst.saleId, {
         saleId: selectedInst.saleId,
-        amount: Number(selectedInst.amount),
+        amount: Number(selectedInst.amount) - Number(selectedInst.paidAmount),
         paymentType: 'INSTALLMENT',
         paymentPlace: quickPaymentPlace,
         notes: '',
@@ -229,6 +229,7 @@ export default function Installments() {
                   <th className="px-4 py-3 text-right text-xs font-bold text-gray-500">{ar.installments.dueDate}</th>
                   <th className="px-4 py-3 text-left text-xs font-bold text-gray-500">{ar.installments.amount}</th>
                   <th className="px-4 py-3 text-left text-xs font-bold text-gray-500">{ar.installments.paidAmount}</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500">المتبقي</th>
                   <th className="px-4 py-3 text-right text-xs font-bold text-gray-500">{ar.installments.isPaid}</th>
                   <th className="px-4 py-3 text-right text-xs font-bold text-gray-500">رقم الإيصال / التاريخ</th>
                   <th className="px-4 py-3 text-center text-xs font-bold text-gray-500">{ar.common.actions}</th>
@@ -251,7 +252,8 @@ export default function Installments() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-left font-bold">{formatCurrency(inst.amount)}</td>
-                      <td className="px-4 py-3 text-left text-green-600">{formatCurrency(inst.paidAmount)}</td>
+                      <td className="px-4 py-3 text-left text-green-600 font-medium">{formatCurrency(inst.paidAmount)}</td>
+                      <td className="px-4 py-3 text-left text-red-600 font-bold">{inst.isPaid ? '0' : formatCurrency(Number(inst.amount) - Number(inst.paidAmount))}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2 flex-wrap">
                           {isOverdueStatus && (
@@ -262,6 +264,11 @@ export default function Installments() {
                           {isDueTodayStatus && !isOverdueStatus && (
                             <span className="px-2 py-1 rounded text-xs font-medium bg-orange-100 text-orange-700">
                               {ar.installments.dueToday}
+                            </span>
+                          )}
+                          {!inst.isPaid && Number(inst.paidAmount) > 0 && (
+                            <span className="px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                              مدفوع جزئياً
                             </span>
                           )}
                           <span className={`px-2 py-1 rounded text-xs font-medium ${inst.isPaid ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
@@ -280,7 +287,7 @@ export default function Installments() {
                       <td className="px-4 py-3">
                         {!inst.isPaid && (
                           <PrimaryButton size="sm" onClick={() => handlePayClick(inst)}>
-                            {ar.payments.pay}
+                            {Number(inst.paidAmount) > 0 ? 'استكمال التحصيل' : ar.payments.pay}
                           </PrimaryButton>
                         )}
                       </td>
@@ -329,6 +336,8 @@ export default function Installments() {
                       )}
                       <th className="px-4 py-2 text-right text-xs text-slate-500">تاريخ الاستحقاق</th>
                       <th className="px-4 py-2 text-right text-xs text-slate-500">المبلغ</th>
+                      <th className="px-4 py-2 text-right text-xs text-slate-500">المدفوع</th>
+                      <th className="px-4 py-2 text-right text-xs text-slate-500">المتبقي</th>
                       <th className="px-4 py-2 text-right text-xs text-slate-500">الحالة</th>
                       <th className="px-4 py-2 text-center text-xs text-slate-500">الإجراء</th>
                     </tr>
@@ -355,6 +364,8 @@ export default function Installments() {
                             </span>
                           </td>
                           <td className="px-4 py-2 font-bold">{formatCurrency(inst.amount)}</td>
+                          <td className="px-4 py-2 text-green-600 font-medium">{formatCurrency(inst.paidAmount)}</td>
+                          <td className="px-4 py-2 text-red-600 font-bold">{inst.isPaid ? '0' : formatCurrency(Number(inst.amount) - Number(inst.paidAmount))}</td>
                           <td className="px-4 py-2">
                             <div className="flex items-center gap-1.5 flex-wrap">
                               {isOverdueStatus && (
@@ -365,6 +376,11 @@ export default function Installments() {
                               {!inst.isPaid && isDueToday(inst.dueDate) && !isOverdueStatus && (
                                 <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-orange-100 text-orange-700">
                                   {ar.installments.dueToday}
+                                </span>
+                              )}
+                              {!inst.isPaid && Number(inst.paidAmount) > 0 && (
+                                <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-800">
+                                  مدفوع جزئياً
                                 </span>
                               )}
                               <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${inst.isPaid ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
@@ -407,8 +423,18 @@ export default function Installments() {
                 <span className="font-medium">{selectedInst.installmentNo}</span>
               </div>
               <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-200">
-                <span className="text-gray-500">{ar.installments.amount}:</span>
-                <span className="font-bold text-lg">{formatCurrency(selectedInst.amount)}</span>
+                <span className="text-gray-500">القيمة الإجمالية:</span>
+                <span className="font-bold">{formatCurrency(selectedInst.amount)}</span>
+              </div>
+              {Number(selectedInst.paidAmount) > 0 && (
+                <div className="flex justify-between items-center mt-1 text-green-600">
+                  <span className="text-sm">ما تم دفعه مسبقاً:</span>
+                  <span className="font-medium">{formatCurrency(selectedInst.paidAmount)}</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-200">
+                <span className="text-gray-900 font-bold">المطلوب سداده الآن:</span>
+                <span className="font-black text-xl text-red-600">{formatCurrency(Number(selectedInst.amount) - Number(selectedInst.paidAmount))}</span>
               </div>
             </div>
             <div>

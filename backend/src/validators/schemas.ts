@@ -7,6 +7,7 @@ export const customerSchema = z.object({
   phone: z.string().max(30, 'رقم الهاتف يجب أن لا يتجاوز 30 حرف').optional().or(z.literal(undefined)),
   address: z.string().max(500, 'العنوان يجب أن لا يتجاوز 500 حرف').optional().or(z.literal(undefined)),
   notes: z.string().max(1000, 'الملاحظات يجب أن لا تتجاوز 1000 حرف').optional().or(z.literal(undefined)),
+  department: z.string().max(100, 'الإدارة يجب أن لا تتجاوز 100 حرف').optional().or(z.literal(undefined)),
 });
 
 export const updateCustomerSchema = z.object({
@@ -16,6 +17,7 @@ export const updateCustomerSchema = z.object({
   phone: z.string().max(30, 'رقم الهاتف يجب أن لا يتجاوز 30 حرف').optional().or(z.literal(undefined)),
   address: z.string().max(500, 'العنوان يجب أن لا يتجاوز 500 حرف').optional().or(z.literal(undefined)),
   notes: z.string().max(1000, 'الملاحظات يجب أن لا تتجاوز 1000 حرف').optional().or(z.literal(undefined)),
+  department: z.string().max(100, 'الإدارة يجب أن لا تتجاوز 100 حرف').optional().or(z.literal(undefined)),
 });
 
 export const saleSchema = z.object({
@@ -63,7 +65,15 @@ export const voidSaleSchema = z.object({
 });
 
 export const recalculateInstallmentsSchema = z.object({
-  newMonths: z.number().int().positive('عدد الأشهر يجب أن يكون موجباً').max(120, 'عدد الأشهر يجب أن لا يتجاوز 120'),
+  months: z.number().int().positive('عدد الأشهر يجب أن يكون رقماً موجباً'),
+});
+
+export const fullRecalculateSchema = z.object({
+  firstDueDate: z.string().optional(),
+  months: z.number().int().positive('عدد الأشهر يجب أن يكون رقماً موجباً').max(120, 'عدد الأشهر يجب أن لا يتجاوز 120').optional(),
+  downPayment: z.number().min(0, 'المقدم لا يمكن أن يكون سالباً').optional(),
+  downPaymentReceipt: z.string().optional(),
+  totalPrice: z.number().min(0, 'إجمالي العقد لا يمكن أن يكون سالباً').optional(),
 });
 
 export const dateRangeSchema = z.object({

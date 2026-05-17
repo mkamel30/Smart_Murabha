@@ -40,6 +40,7 @@ export const salesApi = {
   void: (id: string, reason: string) => api.post(`/sales/${id}/void`, { reason }).then(r => r.data),
   pay: (saleId: string, data: unknown) => api.post(`/sales/${saleId}/pay`, data).then(r => r.data),
   previewPayment: (id: string, amount: number, installmentIds?: string[]) => api.post(`/sales/${id}/preview-payment`, { amount, installmentIds }).then(r => r.data),
+  fullRecalculate: (id: string, data: { firstDueDate?: string; months?: number; downPayment?: number; downPaymentReceipt?: string; totalPrice?: number }) => api.post(`/sales/${id}/full-recalculate`, data).then(r => r.data),
 };
 
 export const installmentsApi = {
@@ -87,6 +88,8 @@ export const reportsApi = {
     api.get('/reports/collections', { params }).then(r => r.data),
   overdue: (params: { startDate?: string; endDate?: string }) => 
     api.get('/reports/overdue', { params }).then(r => r.data),
+  collectionRatio: (params: { startDate?: string; endDate?: string }) => 
+    api.get('/reports/collection-ratio', { params }).then(r => r.data),
   monthClosing: (params: { month: string; year: number | string }) => 
     api.get('/reports/month-closing', { params }).then(r => r.data),
   statement: (customerId: string, params?: { startDate?: string; endDate?: string }) => 
@@ -126,6 +129,11 @@ export const importApi = {
     const formData = new FormData();
     formData.append('file', file);
     return api.post('/import/excel', formData, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data);
+  },
+  preview: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/import/preview', formData, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data);
   },
   downloadTemplate: () => api.get('/import/template', { responseType: 'blob' }).then(r => r.data),
 };

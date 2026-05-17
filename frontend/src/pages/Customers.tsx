@@ -16,7 +16,7 @@ export default function Customers() {
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
-  const [formData, setFormData] = useState({ bkCode: '', customerType: 'عام', name: '', phone: '', address: '', notes: '' });
+  const [formData, setFormData] = useState({ bkCode: '', customerType: 'عام', name: '', phone: '', address: '', notes: '', department: '' });
   const [error, setError] = useState('');
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
@@ -51,7 +51,7 @@ export default function Customers() {
       }
       setShowModal(false);
       setEditingCustomer(null);
-      setFormData({ bkCode: '', customerType: 'عام', name: '', phone: '', address: '', notes: '' });
+      setFormData({ bkCode: '', customerType: 'عام', name: '', phone: '', address: '', notes: '', department: '' });
       loadCustomers();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : ar.common.error);
@@ -68,6 +68,7 @@ export default function Customers() {
       phone: customer.phone || '',
       address: customer.address || '',
       notes: customer.notes || '',
+      department: customer.department || '',
     });
     setShowModal(true);
   };
@@ -105,7 +106,7 @@ export default function Customers() {
           <PrimaryButton
             onClick={() => {
               setEditingCustomer(null);
-              setFormData({ bkCode: '', customerType: 'عام', name: '', phone: '', address: '', notes: '' });
+              setFormData({ bkCode: '', customerType: 'عام', name: '', phone: '', address: '', notes: '', department: '' });
               setShowModal(true);
             }}
           >
@@ -131,6 +132,7 @@ export default function Customers() {
               <tr>
                 <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wide">{ar.customers.bkCode}</th>
                 <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wide">{ar.customers.customerType}</th>
+                <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wide">الإدارة</th>
                 <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wide">{ar.customers.name}</th>
                 <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wide">{ar.customers.phone}</th>
                 <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wide">{ar.customers.address}</th>
@@ -151,6 +153,9 @@ export default function Customers() {
                     }`}>
                       {customer.customerType}
                     </span>
+                  </td>
+                  <td className="px-4 py-3 text-gray-600">
+                    <span className="text-xs font-medium bg-slate-100 text-slate-700 px-2 py-1 rounded-md">{customer.department || '-'}</span>
                   </td>
                   <td className="px-4 py-3">
                     <span className="font-medium text-gray-900">{customer.name}</span>
@@ -242,14 +247,25 @@ export default function Customers() {
               className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#0A2472]/20 focus:border-[#0A2472] transition-colors"
             />
           </div>
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">{ar.customers.notes}</label>
-            <textarea
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#0A2472]/20 focus:border-[#0A2472] transition-colors"
-              rows={3}
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">الإدارة</label>
+              <input
+                type="text"
+                value={formData.department}
+                onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#0A2472]/20 focus:border-[#0A2472] transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">{ar.customers.notes}</label>
+              <textarea
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#0A2472]/20 focus:border-[#0A2472] transition-colors"
+                rows={2}
+              />
+            </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <SecondaryButton type="button" onClick={() => setShowModal(false)}>

@@ -17,12 +17,16 @@ export default function ImportPage() {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
+  const [previewRows, setPreviewRows] = useState<any[] | null>(null);
+  const [dateWarnings, setDateWarnings] = useState<string[]>([]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
     if (selected && selected.name.endsWith('.xlsx')) {
       setFile(selected);
       setResult(null);
+      setPreviewRows(null);
+      setDateWarnings([]);
     } else {
       showToast('يرجى اختيار ملف Excel (.xlsx)', 'error');
     }
@@ -41,6 +45,30 @@ export default function ImportPage() {
       window.URL.revokeObjectURL(url);
     } catch (err) {
       showToast('فشل تحميل النموذج', 'error');
+    }
+  };
+
+  const handlePreview = async () => {
+    if (!file) {
+      showToast('يرجى اختيار ملف أولاً', 'error');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const data = await importApi.preview(file);
+      setPreviewRows(data.previewRows);
+      setDateWarnings(data.dateWarnings);
+      if (data.dateWarnings?.length > 0) {
+        showToast('يوجد تحذيرات في التواريخ، يرجى المراجعة', 'error');
+      } else {
+        showToast('تمت المعاينة بنجاح، يمكنك الآن الاستيراد', 'success');
+      }
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } } };
+      showToast(error.response?.data?.error || 'فشل المعاينة', 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -101,10 +129,75 @@ export default function ImportPage() {
             <Download size={16} className="ml-2" />
             تحميل النموذج
           </SecondaryButton>
-          <PrimaryButton onClick={handleImport} disabled={loading || !file}>
-            {loading ? 'جاري الاستيراد...' : 'استيراد'}
-          </PrimaryButton>
+          {!previewRows ? (
+            <PrimaryButton onClick={handlePreview} disabled={loading || !file}>
+              {loading ? 'جاري المعاينة...' : 'معاينة التواريخ'}
+            </PrimaryButton>
+          ) : (
+            <div className="flex gap-2">
+              <SecondaryButton onClick={() => setPreviewRows(null)}>
+                إلغاء المعاينة
+              </SecondaryButton>
+              <PrimaryButton onClick={handleImport} disabled={loading}>
+                {loading ? 'جاري الاستيراد...' : 'تأكيد واستيراد'}
+              </PrimaryButton>
+            </div>
+          )}
         </div>
+
+        {previewRows && !result && (
+          <div className="mt-4 p-4 bg-slate-50 rounded-lg animate-in fade-in zoom-in-95">
+            <h3 className="font-bold mb-3 text-slate-800">معاينة التواريخ لأول 10 صفوف:</h3>
+            
+            {dateWarnings.length > 0 && (
+              <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg text-sm text-orange-800">
+                <div className="font-bold flex items-center gap-2 mb-2">
+                  <XCircle className="w-4 h-4" />
+                  تحذيرات التواريخ:
+                </div>
+                <ul className="list-disc list-inside space-y-1">
+                  {dateWarnings.map((warn, i) => (
+                    <li key={i}>{warn}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-100">
+                  <tr>
+                    <th className="px-3 py-2 text-right">السطر</th>
+                    <th className="px-3 py-2 text-right">تاريخ البيع (الأصلي)</th>
+                    <th className="px-3 py-2 text-right">تاريخ البيع (بعد التحويل)</th>
+                    <th className="px-3 py-2 text-right">آخر دفعة (الأصلي)</th>
+                    <th className="px-3 py-2 text-right">آخر دفعة (بعد التحويل)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 border-t border-slate-200">
+                  {previewRows.map((row, i) => (
+                    <tr key={i} className="hover:bg-white">
+                      <td className="px-3 py-2 font-mono text-slate-500">{row.rowNum}</td>
+                      <td className="px-3 py-2">{row.saleDateOriginal}</td>
+                      <td className={`px-3 py-2 ${!row.saleDateParsed && row.saleDateOriginal ? 'text-red-500 font-bold' : 'text-green-600'}`}>
+                        {row.saleDateParsed ? new Date(row.saleDateParsed).toLocaleDateString('ar-EG') : 'خطأ'}
+                      </td>
+                      <td className="px-3 py-2">{row.lastDateOriginal || '-'}</td>
+                      <td className={`px-3 py-2 ${!row.lastDateParsed && row.lastDateOriginal ? 'text-red-500 font-bold' : 'text-slate-600'}`}>
+                        {row.lastDateParsed ? new Date(row.lastDateParsed).toLocaleDateString('ar-EG') : '-'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            
+            <div className="mt-4 text-xs text-slate-500 bg-blue-50 p-3 rounded flex gap-2">
+              <span className="font-bold">ملاحظة:</span>
+              يرجى التأكد من صحة التواريخ في المعاينة. إذا وجدت أخطاء، قم بتعديل ملف Excel وأعد رفعه.
+            </div>
+          </div>
+        )}
 
         {result && (
           <div className="mt-4 p-4 bg-slate-50 rounded-lg">

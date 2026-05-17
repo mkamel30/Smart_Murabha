@@ -45,6 +45,31 @@ export default function Sales() {
     months: 12,
   });
   const [error, setError] = useState('');
+  const [step, setStep] = useState(1);
+
+  const nextStep = () => {
+    if (step === 1 && (!formData.customerId || !formData.machineSerial)) {
+      setError('يرجى اختيار العميل وإدخال رقم الماكينة');
+      return;
+    }
+    if (step === 2) {
+      if (formData.totalPrice <= 0) {
+        setError('إجمالي العقد يجب أن يكون أكبر من صفر');
+        return;
+      }
+      if (formData.saleType === 'INSTALLMENT' && (formData.months <= 0 || !formData.months)) {
+        setError('يرجى إدخال عدد الأشهر');
+        return;
+      }
+    }
+    setError('');
+    setStep(prev => Math.min(prev + 1, 3));
+  };
+
+  const prevStep = () => {
+    setError('');
+    setStep(prev => Math.max(prev - 1, 1));
+  };
 
   // Auto-calculate logic for display (User can still override)
   useEffect(() => {
@@ -116,11 +141,18 @@ export default function Sales() {
         lastDepositDate: new Date().toISOString().split('T')[0],
         months: 12,
       });
+      setStep(1);
       loadData();
     } catch (err: any) {
       setError(err.response?.data?.error || err.message || ar.common.error);
       showToast(ar.common.error, 'error');
     }
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setStep(1);
+    setError('');
   };
 
   if (loading) {
@@ -219,217 +251,262 @@ export default function Sales() {
         )}
       </div>
 
-      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={ar.sales.addNew}>
-        {error && <div className="smart-alert smart-alert-error">{error}</div>}
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <div className="flex justify-between items-center mb-2">
-              <label className="block text-sm font-bold text-gray-700">{ar.sales.selectCustomer}</label>
-              <button 
-                type="button" 
-                onClick={() => navigate('/customers')}
-                className="text-xs text-[#0A2472] hover:underline flex items-center gap-1"
-              >
-                + {ar.customers.addNew}
-              </button>
+      <Modal isOpen={showModal} onClose={handleCloseModal} title={ar.sales.addNew}>
+        {error && <div className="smart-alert smart-alert-error mb-4">{error}</div>}
+        
+        <div className="flex items-center justify-between mb-6">
+          {[1, 2, 3].map((num) => (
+            <div key={num} className="flex items-center">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
+                step >= num ? 'bg-[#0A2472] text-white' : 'bg-gray-200 text-gray-500'
+              }`}>
+                {num}
+              </div>
+              {num < 3 && (
+                <div className={`h-1 w-12 md:w-24 ${
+                  step > num ? 'bg-[#0A2472]' : 'bg-gray-200'
+                }`} />
+              )}
             </div>
-            <SmartSelect
-              options={customers.map((c) => ({ id: c.id, label: c.name, sublabel: c.bkCode }))}
-              value={formData.customerId}
-              onChange={(value) => setFormData({ ...formData, customerId: value })}
-              placeholder={`-- ${ar.sales.selectCustomer} --`}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">{ar.sales.machineSerial}</label>
-            <input
-              type="text"
-              value={formData.machineSerial}
-              onChange={(e) => setFormData({ ...formData, machineSerial: e.target.value })}
-              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#0A2472]/20 focus:border-[#0A2472] transition-colors"
-              required
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">{ar.sales.saleType}</label>
-              <SmartSelect
-                options={[
-                  { id: 'CASH', label: ar.sales.cash },
-                  { id: 'INSTALLMENT', label: ar.sales.installment },
-                ]}
-                value={formData.saleType}
-                onChange={(value) => setFormData({ ...formData, saleType: value as 'CASH' | 'INSTALLMENT' })}
-                placeholder={ar.sales.saleType}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">{ar.sales.totalPrice}</label>
-              <input
-                type="number"
-                value={formData.totalPrice || ''}
-                onChange={(e) => setFormData({ ...formData, totalPrice: Number(e.target.value) })}
-                onWheel={(e) => e.currentTarget.blur()}
-                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0A2472]/20 focus:border-[#0A2472] transition-colors"
-                required
-                min="0"
-              />
-            </div>
-          </div>
-          
-          <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-4">
-             <div className="flex justify-between items-center">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">بيانات الدفعة الأولى</p>
-                {formData.saleType === 'INSTALLMENT' && (
-                  <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">نظام Smart Murabha</span>
-                )}
-             </div>
-             <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">المبلغ المدفوع فعلياً</label>
-                  <input
-                    type="number"
-                    value={formData.actualPaidAmount || ''}
-                    onChange={(e) => {
-                      const val = Number(e.target.value);
-                      // Default DP to val (capped by 3000 only if empty, otherwise let user decide)
-                      setFormData(prev => ({ 
-                        ...prev, 
-                        actualPaidAmount: val, 
-                        downPayment: prev.downPayment === 0 || prev.downPayment === 3000 ? Math.min(val, 3000) : prev.downPayment 
-                      }));
-                    }}
-                    onWheel={(e) => e.currentTarget.blur()}
-                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-bold text-[#0A2472]"
-                    placeholder="مثلاً 7530"
-                  />
-                  {formData.saleType === 'INSTALLMENT' && (
-                    <p className="text-[9px] text-blue-600 mt-1 italic">المبلغ الذي يتجاوز "المقدم التعاقدي" سيتم توزيعه كأقساط مقدمة.</p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">تاريخ الحركة</label>
-                  <input
-                    type="date"
-                    value={formData.lastDepositDate}
-                    onChange={(e) => setFormData({ ...formData, lastDepositDate: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#0A2472]/20 focus:border-[#0A2472]"
-                  />
-                </div>
-             </div>
-             
-             <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">رقم الإيصال</label>
-                  <input
-                    type="text"
-                    value={formData.downPaymentReceipt}
-                    onChange={(e) => setFormData({ ...formData, downPaymentReceipt: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#0A2472]/20 focus:border-[#0A2472]"
-                    placeholder="رقم إيصال الدفع"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">{ar.sales.downPayment} (التعاقدي)</label>
-                  <input
-                    type="number"
-                    value={formData.downPayment || ''}
-                    onChange={(e) => setFormData({ ...formData, downPayment: Number(e.target.value) })}
-                    className={`w-full px-3 py-2 bg-white border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#0A2472]/20 focus:border-[#0A2472] font-bold text-teal-700`}
-                    placeholder="3000"
-                  />
-                </div>
-             </div>
-          </div>
+          ))}
+        </div>
+        <div className="flex justify-between text-xs text-gray-500 font-medium mb-6 px-1">
+          <span>الأساسيات</span>
+          <span className="-ml-4">المالية</span>
+          <span>المراجعة</span>
+        </div>
 
-          {formData.saleType === 'INSTALLMENT' && (
-            <div className="grid grid-cols-2 gap-4 items-end">
+        <form onSubmit={step === 3 ? handleSubmit : (e) => { e.preventDefault(); nextStep(); }} className="space-y-5">
+          {step === 1 && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">{ar.sales.months}</label>
-                <input
-                  type="number"
-                  value={formData.months}
-                  onChange={(e) => {
-                    const months = Number(e.target.value);
-                    setFormData({ ...formData, months });
-                  }}
-                  onWheel={(e) => e.currentTarget.blur()}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#0A2472]/20 focus:border-[#0A2472] transition-colors"
-                  min="1"
-                  max="120"
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-sm font-bold text-gray-700">{ar.sales.selectCustomer}</label>
+                  <button 
+                    type="button" 
+                    onClick={() => navigate('/customers')}
+                    className="text-xs text-[#0A2472] hover:underline flex items-center gap-1"
+                  >
+                    + {ar.customers.addNew}
+                  </button>
+                </div>
+                <SmartSelect
+                  options={customers.map((c) => ({ id: c.id, label: c.name, sublabel: c.bkCode }))}
+                  value={formData.customerId}
+                  onChange={(value) => setFormData({ ...formData, customerId: value })}
+                  placeholder={`-- ${ar.sales.selectCustomer} --`}
                 />
               </div>
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">{ar.common.monthlyInstallment}</label>
+                <label className="block text-sm font-bold text-gray-700 mb-2">{ar.sales.machineSerial}</label>
+                <input
+                  type="text"
+                  value={formData.machineSerial}
+                  onChange={(e) => setFormData({ ...formData, machineSerial: e.target.value })}
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#0A2472]/20 focus:border-[#0A2472]"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">{ar.sales.saleType}</label>
+                  <SmartSelect
+                    options={[
+                      { id: 'CASH', label: ar.sales.cash },
+                      { id: 'INSTALLMENT', label: ar.sales.installment },
+                    ]}
+                    value={formData.saleType}
+                    onChange={(value) => setFormData({ ...formData, saleType: value as 'CASH' | 'INSTALLMENT' })}
+                    placeholder={ar.sales.saleType}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">{ar.sales.saleDate}</label>
+                  <input
+                    type="date"
+                    value={formData.saleDate}
+                    onChange={(e) => setFormData({ ...formData, saleDate: e.target.value })}
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#0A2472]/20 focus:border-[#0A2472]"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">إجمالي قيمة العقد</label>
                 <input
                   type="number"
-                  value={Math.round(((formData.totalPrice - (formData.downPayment || 0)) / (formData.months || 1)) * 100) / 100}
-                  onChange={(e) => {
-                    const amount = Number(e.target.value);
-                    if (amount > 0) {
-                      const calculatedMonths = Math.round((formData.totalPrice - (formData.downPayment || 0)) / amount);
-                      setFormData({ ...formData, months: calculatedMonths > 0 ? calculatedMonths : 1 });
-                    }
-                  }}
+                  value={formData.totalPrice || ''}
+                  onChange={(e) => setFormData({ ...formData, totalPrice: Number(e.target.value) })}
                   onWheel={(e) => e.currentTarget.blur()}
-                  className="w-full px-3 py-2 bg-blue-50 border border-blue-200 rounded-md text-sm font-bold text-[#0A2472] focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors"
+                  className="w-full px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg text-lg font-black text-[#0A2472] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  required
                   min="0"
+                />
+              </div>
+
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-4">
+                 <div className="flex justify-between items-center">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">بيانات الدفعة الأولى</p>
+                 </div>
+                 <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">المبلغ المدفوع فعلياً الآن</label>
+                      <input
+                        type="number"
+                        value={formData.actualPaidAmount || ''}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setFormData(prev => ({ 
+                            ...prev, 
+                            actualPaidAmount: val, 
+                            downPayment: prev.downPayment === 0 || prev.downPayment === 3000 ? Math.min(val, 3000) : prev.downPayment 
+                          }));
+                        }}
+                        onWheel={(e) => e.currentTarget.blur()}
+                        className="w-full px-3 py-2 bg-white border border-gray-200 rounded-md text-sm font-bold text-[#0A2472]"
+                        placeholder="مثلاً 7530"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">{ar.sales.downPayment} (التعاقدي)</label>
+                      <input
+                        type="number"
+                        value={formData.downPayment || ''}
+                        onChange={(e) => setFormData({ ...formData, downPayment: Number(e.target.value) })}
+                        className="w-full px-3 py-2 bg-white border border-gray-200 rounded-md text-sm font-bold text-teal-700"
+                        placeholder="3000"
+                      />
+                    </div>
+                 </div>
+                 
+                 <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">تاريخ استلام الدفعة</label>
+                      <input
+                        type="date"
+                        value={formData.lastDepositDate}
+                        onChange={(e) => setFormData({ ...formData, lastDepositDate: e.target.value })}
+                        className="w-full px-3 py-2 bg-white border border-gray-200 rounded-md text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">رقم إيصال الدفعة الأولى</label>
+                      <input
+                        type="text"
+                        value={formData.downPaymentReceipt}
+                        onChange={(e) => setFormData({ ...formData, downPaymentReceipt: e.target.value })}
+                        className="w-full px-3 py-2 bg-white border border-gray-200 rounded-md text-sm"
+                        placeholder="اختياري"
+                      />
+                    </div>
+                 </div>
+              </div>
+
+              {formData.saleType === 'INSTALLMENT' && (
+                <div className="grid grid-cols-2 gap-4 items-end bg-purple-50 p-4 rounded-xl border border-purple-100">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">عدد الأشهر</label>
+                    <input
+                      type="number"
+                      value={formData.months}
+                      onChange={(e) => setFormData({ ...formData, months: Number(e.target.value) })}
+                      onWheel={(e) => e.currentTarget.blur()}
+                      className="w-full px-3 py-2 bg-white border border-purple-200 rounded-md text-sm font-bold"
+                      min="1"
+                      max="120"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">قيمة القسط الشهري (تقريبي)</label>
+                    <input
+                      type="number"
+                      value={Math.round(((formData.totalPrice - (formData.downPayment || 0)) / (formData.months || 1)) * 100) / 100}
+                      onChange={(e) => {
+                        const amount = Number(e.target.value);
+                        if (amount > 0) {
+                          const calculatedMonths = Math.round((formData.totalPrice - (formData.downPayment || 0)) / amount);
+                          setFormData({ ...formData, months: calculatedMonths > 0 ? calculatedMonths : 1 });
+                        }
+                      }}
+                      onWheel={(e) => e.currentTarget.blur()}
+                      className="w-full px-3 py-2 bg-white border border-purple-200 rounded-md text-sm font-bold text-purple-700"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+                <h4 className="font-bold text-[#0A2472] mb-3 border-b border-blue-200 pb-2">ملخص العملية</h4>
+                <div className="grid grid-cols-2 gap-y-2 text-sm">
+                  <div className="text-gray-500">العميل:</div>
+                  <div className="font-bold">{customers.find(c => c.id === formData.customerId)?.name}</div>
+                  <div className="text-gray-500">الماكينة:</div>
+                  <div className="font-bold">{formData.machineSerial}</div>
+                  <div className="text-gray-500">النوع:</div>
+                  <div className="font-bold">{formData.saleType === 'CASH' ? 'كاش' : 'قسط'}</div>
+                  <div className="text-gray-500">الإجمالي:</div>
+                  <div className="font-bold text-[#0A2472]">{formatCurrency(formData.totalPrice)}</div>
+                  <div className="text-gray-500">المدفوع:</div>
+                  <div className="font-bold text-green-600">{formatCurrency(formData.actualPaidAmount)}</div>
+                  {formData.saleType === 'INSTALLMENT' && (
+                    <>
+                      <div className="text-gray-500">عدد الأشهر:</div>
+                      <div className="font-bold">{formData.months} شهر</div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">{ar.sales.paymentPlace}</label>
+                <PaymentPlaceSelect
+                  value={formData.paymentPlace}
+                  onChange={(value) => setFormData({ ...formData, paymentPlace: value })}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">{ar.sales.notes}</label>
+                <textarea
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#0A2472]/20 focus:border-[#0A2472]"
+                  rows={2}
+                  placeholder="أضف أي ملاحظات إضافية هنا..."
                 />
               </div>
             </div>
           )}
           
-          <div className="grid grid-cols-2 gap-4">
-             <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">{ar.sales.saleDate}</label>
-                <input
-                  type="date"
-                  value={formData.saleDate}
-                  onChange={(e) => setFormData({ ...formData, saleDate: e.target.value })}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#0A2472]/20 focus:border-[#0A2472] transition-colors"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">رقم الإيصال</label>
-                <input
-                  type="text"
-                  value={formData.downPaymentReceipt}
-                  onChange={(e) => setFormData({ ...formData, downPaymentReceipt: e.target.value })}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#0A2472]/20 focus:border-[#0A2472] transition-colors"
-                  placeholder={ar.common.receiptNumberPlaceholder}
-                />
-              </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">{ar.sales.paymentPlace}</label>
-              <PaymentPlaceSelect
-                value={formData.paymentPlace}
-                onChange={(value) => setFormData({ ...formData, paymentPlace: value })}
-              />
-            </div>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">{ar.sales.notes}</label>
-            <textarea
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#0A2472]/20 focus:border-[#0A2472] transition-colors"
-              rows={2}
-              placeholder="أضف أي ملاحظات إضافية هنا..."
-            />
-          </div>
-          
-          <div className="flex justify-end gap-2 pt-2">
-            <SecondaryButton type="button" onClick={() => setShowModal(false)}>
-              {ar.common.cancel}
-            </SecondaryButton>
-            <PrimaryButton type="submit">
-              {ar.common.save}
-            </PrimaryButton>
+          <div className="flex justify-between pt-4 mt-2 border-t border-gray-100">
+            {step > 1 ? (
+              <SecondaryButton type="button" onClick={prevStep}>
+                السابق
+              </SecondaryButton>
+            ) : (
+              <SecondaryButton type="button" onClick={handleCloseModal}>
+                إلغاء
+              </SecondaryButton>
+            )}
+            
+            {step < 3 ? (
+              <PrimaryButton type="button" onClick={nextStep}>
+                التالي
+              </PrimaryButton>
+            ) : (
+              <PrimaryButton type="submit">
+                تأكيد وحفظ
+              </PrimaryButton>
+            )}
           </div>
         </form>
       </Modal>

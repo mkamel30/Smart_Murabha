@@ -208,4 +208,41 @@ export class ReportService {
       }
     };
   }
+
+  async collectionRatioReport(startDate?: Date, endDate?: Date) {
+    const today = new Date();
+    const start = startDate ? startOfDay(startDate) : new Date(today.getFullYear(), today.getMonth(), 1);
+    const end = endDate ? endOfDay(endDate) : endOfDay(today);
+
+    // All installments that were DUE in this period
+    const dueInstallments = await prisma.installment.findMany({
+      where: {
+        dueDate: { gte: start, lte: end },
+        sale: { status: 'ACTIVE' }
+      }
+    });
+
+    const totalDue = Math.round(dueInstallments.reduce((sum, inst) => sum + Number(inst.amount), 0));
+
+    // All installment payments made in this period
+    const payments = await prisma.payment.findMany({
+      where: {
+        paidAt: { gte: start, lte: end },
+        paymentType: 'INSTALLMENT',
+        sale: { status: 'ACTIVE' }
+      }
+    });
+
+    const totalCollected = Math.round(payments.reduce((sum, p) => sum + Number(p.amount), 0));
+    const ratio = totalDue > 0 ? (totalCollected / totalDue) * 100 : 0;
+
+    return {
+      period: { start, end },
+      totalDue,
+      totalCollected,
+      ratio: Number(ratio.toFixed(2)),
+      dueInstallmentsCount: dueInstallments.length,
+      paymentsCount: payments.length
+    };
+  }
 }

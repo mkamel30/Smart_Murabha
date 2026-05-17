@@ -6,6 +6,7 @@ export interface Customer {
   phone?: string;
   address?: string;
   notes?: string;
+  department?: string;
   createdAt: string;
   updatedAt: string;
   sales?: MachineSale[];

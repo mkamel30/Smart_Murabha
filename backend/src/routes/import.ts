@@ -7,33 +7,105 @@ import { addMonths } from '../utils/helpers.js';
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
+import { isValid, parse } from 'date-fns';
+
 function parseDate(dateStr: string | number): Date | null {
   if (!dateStr && dateStr !== 0) return null;
   try {
     // Handle Excel serial date number
     if (typeof dateStr === 'number') {
-      // Excel serial: days since 1899-12-30
       const excelEpoch = new Date(1899, 11, 30);
-      const days = dateStr;
-      return new Date(excelEpoch.getTime() + days * 24 * 60 * 60 * 1000);
+      const date = new Date(excelEpoch.getTime() + dateStr * 24 * 60 * 60 * 1000);
+      if (isValid(date) && date.getFullYear() > 2000 && date.getFullYear() < 2050) return date;
+      return null;
     }
-    // Handle string like "DD-MM-YYYY" or "01-01-2024"
+    
     const str = String(dateStr).trim();
     const parts = str.split(/[-/\.]/);
+    
     if (parts.length === 3) {
-      const [day, month, year] = parts.map(Number);
-      if (year > 100 && year < 10000) {
-        return new Date(year, month - 1, day);
+      let p1 = Number(parts[0]);
+      let p2 = Number(parts[1]);
+      let p3 = Number(parts[2]);
+      
+      // Heuristics
+      let day, month, year;
+      if (p3 > 1000) {
+        year = p3;
+        if (p1 > 12) { day = p1; month = p2; }
+        else if (p2 > 12) { day = p2; month = p1; }
+        else { day = p1; month = p2; } // Default DD-MM-YYYY
+      } else if (p1 > 1000) {
+        year = p1;
+        if (p2 > 12) { day = p2; month = p3; }
+        else if (p3 > 12) { day = p3; month = p2; }
+        else { day = p3; month = p2; } // Default YYYY-MM-DD
+      } else {
+        year = p3 < 50 ? 2000 + p3 : 1900 + p3;
+        if (p1 > 12) { day = p1; month = p2; }
+        else if (p2 > 12) { day = p2; month = p1; }
+        else { day = p1; month = p2; }
       }
-      // Maybe it's DD-MM-YY format
-      const fullYear = year < 50 ? 2000 + year : 1900 + year;
-      return new Date(fullYear, month - 1, day);
+      
+      const date = new Date(year, month - 1, day);
+      if (isValid(date) && date.getFullYear() > 2000 && date.getFullYear() < 2050 && date.getMonth() === month - 1) {
+        return date;
+      }
     }
-    return new Date(str);
+    
+    const d = new Date(str);
+    if (isValid(d) && d.getFullYear() > 2000 && d.getFullYear() < 2050) return d;
+    return null;
   } catch {
     return null;
   }
 }
+
+router.post('/preview', upload.single('file'), async (req: Request, res: Response) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+    const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0];
+    const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1 }) as unknown[][];
+
+    if (data.length < 2) return res.status(400).json({ error: 'File is empty' });
+
+    const headers = (data[0] as string[]).map(h => String(h).trim());
+    const saleDateIdx = headers.findIndex(h => h.includes('تاريخ البيع') || h.toLowerCase().includes('sale date'));
+    const lastDateIdx = headers.findIndex(h => h.includes('آخر قسط') || h.includes('آخر دفعة') || h.toLowerCase().includes('last payment'));
+
+    const previewRows = [];
+    const dateWarnings = [];
+
+    // Parse up to 10 rows for preview
+    for (let i = 1; i < Math.min(data.length, 11); i++) {
+      const row = data[i];
+      if (!row || row.length === 0) continue;
+      
+      const saleDateStr = saleDateIdx >= 0 ? row[saleDateIdx] : '';
+      const lastDateStr = lastDateIdx >= 0 ? row[lastDateIdx] : '';
+      
+      const parsedSale = saleDateStr ? parseDate(saleDateStr as string | number) : null;
+      const parsedLast = lastDateStr ? parseDate(lastDateStr as string | number) : null;
+
+      previewRows.push({
+        rowNum: i + 1,
+        saleDateOriginal: saleDateStr,
+        saleDateParsed: parsedSale ? parsedSale.toISOString() : null,
+        lastDateOriginal: lastDateStr,
+        lastDateParsed: parsedLast ? parsedLast.toISOString() : null
+      });
+
+      if (saleDateStr && !parsedSale) dateWarnings.push(`السطر ${i+1}: لم يتم التعرف على تاريخ البيع "${saleDateStr}"`);
+      if (lastDateStr && !parsedLast) dateWarnings.push(`السطر ${i+1}: لم يتم التعرف على تاريخ آخر قسط "${lastDateStr}"`);
+    }
+
+    res.json({ previewRows, dateWarnings });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to generate preview' });
+  }
+});
 
 router.post('/excel', upload.single('file'), async (req: Request, res: Response) => {
   try {
@@ -59,6 +131,7 @@ router.post('/excel', upload.single('file'), async (req: Request, res: Response)
       bkCode: headers.findIndex(h => h.includes('كود') || h.toLowerCase().includes('code')),
       customerType: headers.findIndex(h => h.includes('نوع') || h.toLowerCase().includes('type')),
       customerName: headers.findIndex(h => h.includes('اسم') || h.toLowerCase().includes('name')),
+      department: headers.findIndex(h => h.includes('إدارة') || h.includes('الادارة') || h.toLowerCase().includes('department')),
       machineSerial: headers.findIndex(h => h.includes('سيريال') || h.toLowerCase().includes('serial')),
       saleDate: headers.findIndex(h => h.includes('تاريخ البيع') || h.toLowerCase().includes('sale date')),
       totalPrice: headers.findIndex(h => h.includes('قيمة العقد') || h.includes('السعر') || (h.includes('إجمالي') && !h.includes('محصلة') && !h.includes('أقساط')) || h.toLowerCase().includes('total price')),
@@ -114,6 +187,7 @@ router.post('/excel', upload.single('file'), async (req: Request, res: Response)
       const bkCode = String(row[columnMap.bkCode] || '').trim();
       const customerType = columnMap.customerType >= 0 ? String(row[columnMap.customerType] || 'عام').trim() : 'عام';
       const customerName = String(row[columnMap.customerName] || '').trim();
+      const department = columnMap.department >= 0 ? String(row[columnMap.department] || '').trim() : '';
       const machineSerial = columnMap.machineSerial >= 0 ? String(row[columnMap.machineSerial] || '').trim() : '';
       const totalPrice = columnMap.totalPrice >= 0 ? Number(row[columnMap.totalPrice]) || 0 : 0;
       const paidAmount = columnMap.paidAmount >= 0 ? Number(row[columnMap.paidAmount]) || 0 : 0;
@@ -154,7 +228,7 @@ router.post('/excel', upload.single('file'), async (req: Request, res: Response)
         
         if (!customer) {
           customer = await prisma.customer.create({
-            data: { bkCode, customerType, name: customerName }
+            data: { bkCode, customerType, name: customerName, department: department || null }
           });
           results.customersCreated++;
         } else {
@@ -303,8 +377,8 @@ router.post('/excel', upload.single('file'), async (req: Request, res: Response)
 router.get('/template', async (req: Request, res: Response) => {
   // Note: Use Excel date column (serial number) or string format DD-MM-YYYY
   const template = [
-    ['كود العميل', 'نوع العميل', 'اسم العميل', 'السيريال', 'تاريخ البيع القديم', 'إجمالي قيمة العقد', 'إجمالي الأقساط المحصلة', 'المقدم', 'عدد الأقساط', 'قيمة القسط الشهري', 'تاريخ آخر قسط مدفوع', 'ملاحظات'],
-    ['C001', 'مخبز', 'أحمد محمد', 'SN123456', '01-01-2024', '10000', '5000', '3000', '7', '1000', '15-03-2024', 'ملاحظة اختيارية'],
+    ['كود العميل', 'نوع العميل', 'الإدارة', 'اسم العميل', 'السيريال', 'تاريخ البيع القديم', 'إجمالي قيمة العقد', 'إجمالي الأقساط المحصلة', 'المقدم', 'عدد الأقساط', 'قيمة القسط الشهري', 'تاريخ آخر قسط مدفوع', 'ملاحظات'],
+    ['C001', 'مخبز', 'إدارة 1', 'أحمد محمد', 'SN123456', '01-01-2024', '10000', '5000', '3000', '7', '1000', '15-03-2024', 'ملاحظة اختيارية'],
   ];
 
   const worksheet = XLSX.utils.aoa_to_sheet(template);

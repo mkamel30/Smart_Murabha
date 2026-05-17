@@ -15,6 +15,7 @@ model Customer {
   phone        String?
   address      String?
   notes        String?
+  department   String?
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 

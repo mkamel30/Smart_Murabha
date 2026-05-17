@@ -33,6 +33,7 @@ export class CustomerService {
       phone: data.phone || null,
       address: data.address || null,
       notes: data.notes || null,
+      department: data.department || null,
     };
     return customerRepo.create(createData);
   }

@@ -37,13 +37,14 @@ interface MonthClosingReport {
 export default function Reports() {
   const location = useLocation();
   const state = location.state as any;
-  const [reportType, setReportType] = useState<'sales' | 'collections' | 'overdue' | 'monthClosing'>(
+  const [reportType, setReportType] = useState<'sales' | 'collections' | 'overdue' | 'monthClosing' | 'collectionRatio'>(
     state?.reportType || 'sales'
   );
   const [salesReport, setSalesReport] = useState<SalesReport | null>(null);
   const [collectionsReport, setCollectionsReport] = useState<CollectionsReport | null>(null);
   const [overdueReport, setOverdueReport] = useState<OverdueReport | null>(null);
   const [monthClosingReport, setMonthClosingReport] = useState<MonthClosingReport | null>(null);
+  const [collectionRatioReport, setCollectionRatioReport] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
   // Auto-set dates if currentMonth filter is requested
@@ -114,6 +115,12 @@ export default function Reports() {
       } else if (reportType === 'monthClosing') {
         const data = await reportsApi.monthClosing({ month: String(selectedMonth), year: selectedYear });
         setMonthClosingReport(data);
+      } else if (reportType === 'collectionRatio') {
+        const data = await reportsApi.collectionRatio({ 
+          startDate: startDate || undefined, 
+          endDate: endDate || undefined 
+        });
+        setCollectionRatioReport(data);
       }
     } catch (err) {
       console.error('Failed to load report:', err);
@@ -215,6 +222,14 @@ export default function Reports() {
           }`}
         >
           إقفال الشهر
+        </button>
+        <button
+          onClick={() => setReportType('collectionRatio')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium ${
+            reportType === 'collectionRatio' ? 'bg-[#0A2472] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+          }`}
+        >
+          نسبة التحصيل
         </button>
       </div>
 
@@ -380,6 +395,7 @@ export default function Reports() {
                   <tr>
                     <th className="px-4 py-2.5 text-right text-xs font-medium text-slate-500">{ar.sales.receiptNumber}</th>
                     <th className="px-4 py-2.5 text-right text-xs font-medium text-slate-500">{ar.customers.name}</th>
+                    <th className="px-4 py-2.5 text-right text-xs font-medium text-slate-500">الإدارة</th>
                     <th className="px-4 py-2.5 text-right text-xs font-medium text-slate-500">رقم الماكينة</th>
                     <th className="px-4 py-2.5 text-right text-xs font-medium text-slate-500">النظام</th>
                     <th className="px-4 py-2.5 text-right text-xs font-medium text-slate-500">{ar.sales.saleType}</th>
@@ -397,6 +413,7 @@ export default function Reports() {
                         <div className="font-medium">{sale.customer?.name}</div>
                         <div className="text-[10px] text-slate-400 font-mono">{sale.customer?.bkCode}</div>
                       </td>
+                      <td className="px-4 py-2.5 text-xs text-slate-500">{sale.customer?.department || '-'}</td>
                       <td className="px-4 py-2.5 font-mono text-xs">{sale.machineSerial}</td>
                       <td className="px-4 py-2.5 text-xs">
                         {sale.saleType === 'INSTALLMENT' ? `${sale.months} شهر` : '-'}
@@ -505,6 +522,7 @@ export default function Reports() {
                   <tr>
                     <th className="px-4 py-2.5 text-right text-xs font-medium text-slate-500">{ar.payments.receiptNumber}</th>
                     <th className="px-4 py-2.5 text-right text-xs font-medium text-slate-500">{ar.customers.name}</th>
+                    <th className="px-4 py-2.5 text-right text-xs font-medium text-slate-500">الإدارة</th>
                     <th className="px-4 py-2.5 text-right text-xs font-medium text-slate-500">رقم الماكينة</th>
                     <th className="px-4 py-2.5 text-right text-xs font-medium text-slate-500">النظام</th>
                     <th className="px-4 py-2.5 text-right text-xs font-medium text-slate-500">{ar.payments.paymentType}</th>
@@ -520,6 +538,7 @@ export default function Reports() {
                         <div className="font-medium">{pay.sale?.customer?.name}</div>
                         <div className="text-[10px] text-slate-400 font-mono">{pay.sale?.customer?.bkCode}</div>
                       </td>
+                      <td className="px-4 py-2.5 text-xs text-slate-500">{pay.sale?.customer?.department || '-'}</td>
                       <td className="px-4 py-2.5 font-mono text-xs">{pay.sale?.machineSerial}</td>
                       <td className="px-4 py-2.5 text-xs">
                         {pay.sale?.saleType === 'INSTALLMENT' ? `${pay.sale?.months} شهر` : '-'}
@@ -692,6 +711,30 @@ export default function Reports() {
             ))}
           </div>
         )}
+        </div>
+      )}
+
+      {/* Collection Ratio Report */}
+      {reportType === 'collectionRatio' && collectionRatioReport && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4 col-span-2 md:col-span-4 flex flex-col items-center justify-center py-8">
+              <div className="text-sm text-slate-500 font-bold mb-2">نسبة التحصيل الكلية (المحصل / المستحق)</div>
+              <div className="text-4xl font-black text-[#0A2472]">{collectionRatioReport.ratio}%</div>
+            </div>
+            
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+              <div className="text-xs text-slate-500 font-bold mb-1">إجمالي المستحق</div>
+              <div className="text-xl font-bold text-red-600">{formatCurrency(collectionRatioReport.totalDue)}</div>
+              <div className="text-xs text-slate-400 mt-1">{collectionRatioReport.dueInstallmentsCount} قسط مستحق</div>
+            </div>
+            
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+              <div className="text-xs text-slate-500 font-bold mb-1">إجمالي المحصل من الأقساط</div>
+              <div className="text-xl font-bold text-teal-600">{formatCurrency(collectionRatioReport.totalCollected)}</div>
+              <div className="text-xs text-slate-400 mt-1">{collectionRatioReport.paymentsCount} عملية دفع</div>
+            </div>
+          </div>
         </div>
       )}
 

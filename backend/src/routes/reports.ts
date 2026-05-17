@@ -68,4 +68,17 @@ router.get('/month-closing', async (req: Request, res: Response, next: NextFunct
   }
 });
 
+router.get('/collection-ratio', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { startDate, endDate } = req.query;
+    const result = await reportService.collectionRatioReport(
+      startDate ? new Date(startDate as string) : undefined,
+      endDate ? new Date(endDate as string) : undefined
+    );
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

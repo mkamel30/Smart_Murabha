@@ -633,4 +633,120 @@ export class SaleService {
 
     return saleRepo.findById(id);
   }
+
+  async fullRecalculate(id: string, updates: { firstDueDate?: Date | string; months?: number; downPayment?: number; downPaymentReceipt?: string; totalPrice?: number }) {
+    const sale = await saleRepo.findById(id);
+    if (!sale) throw new Error('البيع غير موجود');
+    if (sale.status === 'VOIDED') throw new Error('لا يمكن تعديل بيع ملغى');
+    if (sale.saleType !== 'INSTALLMENT') throw new Error('هذا البيع ليس بالأقساط');
+
+    const newTotalPrice = updates.totalPrice !== undefined ? updates.totalPrice : Number(sale.totalPrice);
+    const newDownPayment = updates.downPayment !== undefined ? updates.downPayment : Number(sale.downPayment);
+    const newMonths = updates.months !== undefined ? updates.months : Number(sale.months);
+    const newFirstDueDate = updates.firstDueDate ? new Date(updates.firstDueDate) : sale.firstDueDate;
+    const newDownPaymentReceipt = updates.downPaymentReceipt !== undefined ? updates.downPaymentReceipt : sale.downPaymentReceipt;
+
+    if (newMonths <= 0) throw new Error('عدد الأشهر يجب أن يكون أكبر من 0');
+    if (newDownPayment > newTotalPrice) throw new Error('المقدم لا يمكن أن يكون أكبر من الإجمالي');
+
+    const totalToInstall = newTotalPrice - newDownPayment;
+    const installmentAmount = Math.round((totalToInstall / newMonths) * 100) / 100;
+
+    await prisma.$transaction(async (tx: any) => {
+      // 1. Delete ALL installments
+      await tx.installment.deleteMany({ where: { saleId: id } });
+
+      // 2. Create new installments
+      const newInstallments = [];
+      let remainingToDistribute = totalToInstall;
+      for (let i = 1; i <= newMonths; i++) {
+        const dueDate = newFirstDueDate ? addMonths(new Date(newFirstDueDate), i - 1) : addMonths(new Date(sale.saleDate), i);
+        const amt = i === newMonths ? Math.round(remainingToDistribute * 100) / 100 : installmentAmount;
+        newInstallments.push({
+          saleId: id,
+          installmentNo: i,
+          dueDate,
+          amount: amt,
+          paidAmount: 0,
+          isPaid: false,
+          isWaived: false,
+          waiveReason: null,
+          paidDate: null,
+          receiptNumber: null,
+        });
+        remainingToDistribute -= amt;
+      }
+      await tx.installment.createMany({ data: newInstallments });
+
+      // 3. Update MachineSale fields temporarily to reset state
+      await tx.machineSale.update({
+        where: { id },
+        data: {
+          totalPrice: newTotalPrice,
+          downPayment: newDownPayment,
+          months: newMonths,
+          firstDueDate: newFirstDueDate,
+          downPaymentReceipt: newDownPaymentReceipt,
+          paidAmount: 0,
+          remainingAmount: newTotalPrice,
+          status: 'ACTIVE'
+        }
+      });
+
+      // 4. Fetch all payments and re-apply them
+      const payments = await tx.payment.findMany({
+        where: { saleId: id },
+        orderBy: { paidAt: 'asc' }
+      });
+
+      let totalPaid = 0;
+      for (const p of payments) {
+        const pAmount = Number(p.amount);
+        totalPaid += pAmount;
+
+        // Distribute installment payments
+        if (p.paymentType !== 'DOWN_PAYMENT' && p.paymentType !== 'CASH_SALE') {
+          const unpaidInstallments = await tx.installment.findMany({
+            where: { saleId: id, isPaid: false },
+            orderBy: { installmentNo: 'asc' }
+          });
+
+          let remToDistribute = pAmount;
+          for (const inst of unpaidInstallments) {
+            if (remToDistribute <= 0) break;
+            const unpaidForThis = Number(inst.amount) - Number(inst.paidAmount);
+            if (unpaidForThis <= 0) continue;
+
+            const paymentForThis = Math.min(remToDistribute, unpaidForThis);
+            const newPaidAmountInst = Number(inst.paidAmount) + paymentForThis;
+            const isFullyPaid = newPaidAmountInst >= Number(inst.amount) - 0.01;
+
+            await tx.installment.update({
+              where: { id: inst.id },
+              data: {
+                paidAmount: isFullyPaid ? inst.amount : newPaidAmountInst,
+                isPaid: isFullyPaid,
+                paidDate: isFullyPaid ? p.paidAt : inst.paidDate,
+                receiptNumber: isFullyPaid ? p.receiptNumber : inst.receiptNumber,
+              }
+            });
+            remToDistribute -= paymentForThis;
+          }
+        }
+      }
+
+      // 5. Final update to MachineSale totals
+      const finalRemaining = newTotalPrice - totalPaid;
+      await tx.machineSale.update({
+        where: { id },
+        data: {
+          paidAmount: totalPaid,
+          remainingAmount: finalRemaining,
+          status: finalRemaining <= 0.01 ? 'COMPLETED' : 'ACTIVE'
+        }
+      });
+    });
+
+    return saleRepo.findById(id);
+  }
 }

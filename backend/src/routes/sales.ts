@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { SaleService } from '../services/saleService.js';
-import { saleSchema, voidSaleSchema, recalculateInstallmentsSchema, paymentSchema } from '../validators/schemas.js';
+import { saleSchema, voidSaleSchema, recalculateInstallmentsSchema, paymentSchema, fullRecalculateSchema } from '../validators/schemas.js';
 
 import { SaleRepository } from '../repositories/index.js';
 
@@ -153,7 +153,26 @@ router.post('/:id/void', async (req: Request, res: Response, next: NextFunction)
 router.post('/:id/recalculate', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const data = validateRecalculate(req.body);
-    const sale = await saleService.recalculateInstallments(req.params.id as string, data.newMonths);
+    const sale = await saleService.recalculateInstallments(req.params.id as string, data.months);
+    res.json(sale);
+  } catch (error) {
+    next(error);
+  }
+});
+
+function validateFullRecalculate(data: unknown) {
+  const result = fullRecalculateSchema.safeParse(data);
+  if (!result.success) {
+    const errors = result.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+    throw new Error(`Validation error: ${errors}`);
+  }
+  return result.data;
+}
+
+router.post('/:id/full-recalculate', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const data = validateFullRecalculate(req.body);
+    const sale = await saleService.fullRecalculate(req.params.id as string, data);
     res.json(sale);
   } catch (error) {
     next(error);

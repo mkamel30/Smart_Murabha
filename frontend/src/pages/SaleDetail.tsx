@@ -42,7 +42,12 @@ export default function SaleDetail() {
   const [quickPaidAt, setQuickPaidAt] = useState(new Date().toISOString().split('T')[0]);
   const [editSaleForm, setEditSaleForm] = useState({
     saleDate: '',
-    notes: ''
+    notes: '',
+    totalPrice: 0,
+    downPayment: 0,
+    months: 0,
+    firstDueDate: '',
+    downPaymentReceipt: ''
   });
   const [paymentPreview, setPaymentPreview] = useState<any>(null);
   
@@ -195,8 +200,35 @@ export default function SaleDetail() {
 
   const handleEditSale = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!sale) return;
+    
+    const isCoreChanged = (
+      Number(editSaleForm.totalPrice) !== Number(sale.totalPrice) ||
+      Number(editSaleForm.downPayment) !== Number(sale.downPayment) ||
+      Number(editSaleForm.months) !== Number(sale.months) ||
+      (editSaleForm.firstDueDate && editSaleForm.firstDueDate !== (sale.firstDueDate ? new Date(sale.firstDueDate).toISOString().split('T')[0] : '')) ||
+      editSaleForm.downPaymentReceipt !== (sale.downPaymentReceipt || '')
+    );
+
     try {
-      await salesApi.update(id!, editSaleForm);
+      if (isCoreChanged && sale.saleType === 'INSTALLMENT') {
+        if (!window.confirm('تحذير: تغيير بيانات العقد الأساسية سيؤدي إلى مسح الأقساط الحالية وإعادة حسابها وتوزيع الدفعات السابقة من جديد. هل أنت متأكد؟')) {
+          return;
+        }
+        await salesApi.fullRecalculate(id!, {
+          totalPrice: Number(editSaleForm.totalPrice),
+          downPayment: Number(editSaleForm.downPayment),
+          months: Number(editSaleForm.months),
+          firstDueDate: editSaleForm.firstDueDate || undefined,
+          downPaymentReceipt: editSaleForm.downPaymentReceipt
+        });
+      }
+
+      await salesApi.update(id!, {
+        saleDate: editSaleForm.saleDate,
+        notes: editSaleForm.notes
+      });
+      
       showToast(ar.common.success, 'success');
       setShowEditSaleModal(false);
       loadSale();
@@ -209,7 +241,12 @@ export default function SaleDetail() {
     if (!sale) return;
     setEditSaleForm({
       saleDate: new Date(sale.saleDate).toISOString().split('T')[0],
-      notes: sale.notes || ''
+      notes: sale.notes || '',
+      totalPrice: Number(sale.totalPrice),
+      downPayment: Number(sale.downPayment),
+      months: Number(sale.months || 0),
+      firstDueDate: sale.firstDueDate ? new Date(sale.firstDueDate).toISOString().split('T')[0] : '',
+      downPaymentReceipt: sale.downPaymentReceipt || ''
     });
     setShowEditSaleModal(true);
   };
@@ -335,6 +372,7 @@ export default function SaleDetail() {
                   <th className="px-4 py-3 text-right text-xs font-bold text-gray-500">{ar.installments.dueDate}</th>
                   <th className="px-4 py-3 text-left text-xs font-bold text-gray-500">{ar.installments.amount}</th>
                   <th className="px-4 py-3 text-left text-xs font-bold text-gray-500">{ar.installments.paidAmount}</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500">المتبقي</th>
                   <th className="px-1 py-1 whitespace-nowrap text-right text-xs font-bold text-gray-500">{ar.installments.isPaid}</th>
                   <th className="px-4 py-3 text-right text-xs font-bold text-gray-500">رقم الإيصال / المكان / التاريخ</th>
                   <th className="px-4 py-3 text-center text-xs font-bold text-gray-500">{ar.common.actions}</th>
@@ -346,11 +384,12 @@ export default function SaleDetail() {
                   const payment = sale.payments?.find(p => p.receiptNumber === inst.receiptNumber);
                   
                   return (
-                    <tr key={inst.id} className={`hover:bg-gray-50 transition-colors ${inst.isWaived ? 'bg-emerald-50' : ''}`}>
+                    <tr key={inst.id} className={`hover:bg-gray-50 transition-colors ${inst.isWaived ? 'bg-emerald-50' : (!inst.isPaid && Number(inst.paidAmount) > 0 ? 'bg-amber-50/50' : '')}`}>
                       <td className="px-4 py-3 font-medium">{inst.installmentNo}</td>
                       <td className="px-4 py-3 text-gray-600">{formatDate(inst.dueDate)}</td>
                       <td className="px-4 py-3 text-left font-bold">{formatCurrency(inst.amount)}</td>
-                      <td className="px-4 py-3 text-left text-green-600">{formatCurrency(inst.paidAmount)}</td>
+                      <td className="px-4 py-3 text-left text-green-600 font-medium">{formatCurrency(inst.paidAmount)}</td>
+                      <td className="px-4 py-3 text-left text-red-600 font-bold">{inst.isPaid ? '0' : formatCurrency(Number(inst.amount) - Number(inst.paidAmount))}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           {inst.isWaived ? (
@@ -362,6 +401,11 @@ export default function SaleDetail() {
                               <span className={`px-2 py-1 rounded text-xs font-medium ${inst.isPaid ? 'bg-green-50 text-green-700' : isOverdue(inst.dueDate) ? 'bg-red-50 text-red-700' : 'bg-orange-50 text-orange-700'}`}>
                                 {inst.isPaid ? ar.installments.paid : ar.installments.unpaid}
                               </span>
+                              {!inst.isPaid && Number(inst.paidAmount) > 0 && (
+                                <span className="px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                                  مدفوع جزئياً
+                                </span>
+                              )}
                               {!inst.isPaid && isOverdue(inst.dueDate) && (
                                 <span className="px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-700">
                                   {ar.installments.overdue}
@@ -401,7 +445,7 @@ export default function SaleDetail() {
                             size="sm" 
                             onClick={() => handlePayInstallment(inst.id, Number(inst.amount) - Number(inst.paidAmount))}
                           >
-                            {ar.payments.pay}
+                            {Number(inst.paidAmount) > 0 ? 'استكمال التحصيل' : ar.payments.pay}
                           </PrimaryButton>
                         )}
                         {inst.isWaived && inst.waiveReason && (
@@ -633,9 +677,13 @@ export default function SaleDetail() {
         {selectedInstallment && (
           <div className="space-y-5">
             <div className="bg-gray-50 rounded-lg p-4">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-500">{ar.installments.amount}:</span>
-                <span className="font-bold text-lg">{formatCurrency(selectedInstallment.amount)}</span>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-gray-500">القيمة الإجمالية:</span>
+                <span className="font-bold">{formatCurrency(selectedInstallment.amount)}</span>
+              </div>
+              <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-200">
+                <span className="text-gray-900 font-bold">المطلوب سداده الآن:</span>
+                <span className="font-black text-xl text-red-600">{formatCurrency(selectedInstallment.amount)}</span>
               </div>
             </div>
             <div>
@@ -679,23 +727,85 @@ export default function SaleDetail() {
 
       <Modal isOpen={showEditSaleModal} onClose={() => setShowEditSaleModal(false)} title="تعديل بيانات البيع">
         <form onSubmit={handleEditSale} className="space-y-5">
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">{ar.sales.saleDate}</label>
-            <input
-              type="date"
-              value={editSaleForm.saleDate}
-              onChange={(e) => setEditSaleForm({ ...editSaleForm, saleDate: e.target.value })}
-              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#0A2472]/20 focus:border-[#0A2472]"
-              required
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">{ar.sales.saleDate}</label>
+              <input
+                type="date"
+                value={editSaleForm.saleDate}
+                onChange={(e) => setEditSaleForm({ ...editSaleForm, saleDate: e.target.value })}
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#0A2472]/20 focus:border-[#0A2472]"
+                required
+              />
+            </div>
+            {sale?.saleType === 'INSTALLMENT' && (
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">تاريخ أول قسط</label>
+                <input
+                  type="date"
+                  value={editSaleForm.firstDueDate}
+                  onChange={(e) => setEditSaleForm({ ...editSaleForm, firstDueDate: e.target.value })}
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#0A2472]/20 focus:border-[#0A2472]"
+                />
+              </div>
+            )}
           </div>
+          
+          {sale?.saleType === 'INSTALLMENT' && (
+            <>
+              <div className="p-3 bg-red-50 border border-red-100 rounded-lg">
+                <p className="text-xs font-bold text-red-700 mb-3 text-center">
+                  ⚠️ تغيير الحقول التالية سيؤدي إلى إعادة حساب وجدولة جميع الأقساط
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">{ar.sales.totalPrice}</label>
+                    <input
+                      type="number"
+                      value={editSaleForm.totalPrice}
+                      onChange={(e) => setEditSaleForm({ ...editSaleForm, totalPrice: Number(e.target.value) })}
+                      className="w-full px-3 py-2 bg-white border border-red-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">{ar.sales.downPayment}</label>
+                    <input
+                      type="number"
+                      value={editSaleForm.downPayment}
+                      onChange={(e) => setEditSaleForm({ ...editSaleForm, downPayment: Number(e.target.value) })}
+                      className="w-full px-3 py-2 bg-white border border-red-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">عدد الأشهر</label>
+                    <input
+                      type="number"
+                      value={editSaleForm.months}
+                      onChange={(e) => setEditSaleForm({ ...editSaleForm, months: Number(e.target.value) })}
+                      className="w-full px-3 py-2 bg-white border border-red-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
+                    />
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <label className="block text-sm font-bold text-gray-700 mb-2">رقم إيصال المقدم (إن وجد)</label>
+                  <input
+                    type="text"
+                    value={editSaleForm.downPaymentReceipt}
+                    onChange={(e) => setEditSaleForm({ ...editSaleForm, downPaymentReceipt: e.target.value })}
+                    className="w-full px-3 py-2 bg-white border border-red-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-2">{ar.sales.notes}</label>
             <textarea
               value={editSaleForm.notes}
               onChange={(e) => setEditSaleForm({ ...editSaleForm, notes: e.target.value })}
               className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#0A2472]/20 focus:border-[#0A2472]"
-              rows={4}
+              rows={3}
             />
           </div>
           <div className="flex justify-end gap-2 pt-2">
