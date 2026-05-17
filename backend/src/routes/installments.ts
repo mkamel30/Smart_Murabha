@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { InstallmentRepository } from '../repositories/index.js';
 import { SaleService } from '../services/saleService.js';
+import prisma from '../lib/prisma.js';
 
 const router = Router();
 const installmentRepo = new InstallmentRepository();
@@ -45,13 +46,71 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
 router.patch('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { receiptNumber, paidDate, isPaid, paidAmount } = req.body;
-    const installment = await installmentRepo.update(req.params.id as string, {
-      receiptNumber: receiptNumber !== undefined ? receiptNumber : undefined,
-      paidDate: paidDate ? new Date(paidDate) : (paidDate === null ? null : undefined),
-      isPaid: isPaid !== undefined ? isPaid : undefined,
-      paidAmount: paidAmount !== undefined ? paidAmount : undefined,
+    
+    // Fetch old installment first
+    const oldInstallment = await prisma.installment.findUnique({
+      where: { id: req.params.id as string }
     });
-    res.json(installment);
+    if (!oldInstallment) {
+      return res.status(404).json({ error: 'القسط غير موجود' });
+    }
+
+    const updatedInstallment = await prisma.$transaction(async (tx) => {
+      // 1. Update target installment
+      const inst = await tx.installment.update({
+        where: { id: req.params.id as string },
+        data: {
+          receiptNumber: receiptNumber !== undefined ? receiptNumber : undefined,
+          paidDate: paidDate ? new Date(paidDate) : (paidDate === null ? null : undefined),
+          isPaid: isPaid !== undefined ? isPaid : undefined,
+          paidAmount: paidAmount !== undefined ? paidAmount : undefined,
+        }
+      });
+
+      // 2. Synchronize with Payment table if there was an old receiptNumber
+      if (oldInstallment.receiptNumber) {
+        const newReceiptNumber = receiptNumber !== undefined ? receiptNumber : oldInstallment.receiptNumber;
+        const newPaidDate = paidDate ? new Date(paidDate) : oldInstallment.paidDate;
+
+        // Find the Payment record associated with the old receiptNumber for this sale
+        const payment = await tx.payment.findFirst({
+          where: {
+            saleId: oldInstallment.saleId,
+            receiptNumber: oldInstallment.receiptNumber
+          }
+        });
+
+        if (payment) {
+          // Update the Payment record
+          await tx.payment.update({
+            where: { id: payment.id },
+            data: {
+              receiptNumber: newReceiptNumber,
+              paidAt: newPaidDate ? new Date(newPaidDate) : undefined
+            }
+          });
+        }
+
+        // Update any OTHER installments of this sale sharing the old receiptNumber
+        if (receiptNumber !== undefined || paidDate !== undefined) {
+          await tx.installment.updateMany({
+            where: {
+              saleId: oldInstallment.saleId,
+              receiptNumber: oldInstallment.receiptNumber,
+              id: { not: req.params.id as string }
+            },
+            data: {
+              receiptNumber: newReceiptNumber,
+              paidDate: newPaidDate
+            }
+          });
+        }
+      }
+
+      return inst;
+    });
+
+    res.json(updatedInstallment);
   } catch (error) {
     next(error);
   }

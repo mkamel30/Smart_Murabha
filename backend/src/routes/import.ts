@@ -258,7 +258,7 @@ router.post('/excel', upload.single('file'), async (req: Request, res: Response)
             saleType: isCash ? 'CASH' : 'INSTALLMENT',
             totalPrice,
             downPayment: expectedDownPayment,
-            paidAmount: totalActualPaid, // Sum of downPayment + collected installments
+            paidAmount: totalActualPaid,
             remainingAmount: Math.max(0, remainingAfterAllPaid),
             paymentPlace: 'dhamen',
             notes: notes || 'مستورد من ملف قديم',
@@ -279,14 +279,32 @@ router.post('/excel', upload.single('file'), async (req: Request, res: Response)
           const toInstall = totalPrice - expectedDownPayment;
           const instAmount = monthlyInstallment > 0 ? monthlyInstallment : Math.round((toInstall / months) * 100) / 100;
           
-          // extraCash is what's left for installments (which is the 'paidAmount' column from Excel)
           let extraCash = paidAmount;
           let remainingToDistribute = toInstall;
  
+          // Calculate lastPaidIndex
+          let tempExtra = paidAmount;
+          let tempRemaining = toInstall;
+          let lastPaidIndex = 0;
+          for (let m = 1; m <= months; m++) {
+            const fullAmount = m === months ? Math.round(tempRemaining * 100) / 100 : instAmount;
+            const applied = Math.min(tempExtra, fullAmount);
+            if (applied > 0) {
+              lastPaidIndex = m;
+            }
+            tempRemaining -= fullAmount;
+            tempExtra -= applied;
+          }
+  
           for (let m = 1; m <= months; m++) {
             const fullAmount = m === months ? Math.round(remainingToDistribute * 100) / 100 : instAmount;
             const appliedExtra = Math.min(extraCash, fullAmount);
             const isFullyPaidByExtra = appliedExtra >= fullAmount - 0.01;
+
+            const instReceiptNumber = isFullyPaidByExtra ? `PAY-${Date.now()}-${i}-INST-${m}` : null;
+            const instPaidDate = isFullyPaidByExtra 
+              ? (m === lastPaidIndex && lastPaymentDate ? lastPaymentDate : new Date(currentDate)) 
+              : null;
  
             installments.push({
               saleId: sale.id,
@@ -297,9 +315,23 @@ router.post('/excel', upload.single('file'), async (req: Request, res: Response)
               isPaid: isFullyPaidByExtra,
               isWaived: false,
               waiveReason: null,
-              paidDate: isFullyPaidByExtra ? (lastPaymentDate || saleDate || new Date()) : null,
-              receiptNumber: isFullyPaidByExtra ? receiptNumber : null,
+              paidDate: instPaidDate,
+              receiptNumber: instReceiptNumber,
             });
+
+            if (appliedExtra > 0) {
+              await prisma.payment.create({
+                data: {
+                  receiptNumber: instReceiptNumber || `PAY-${Date.now()}-${i}-INST-${m}`,
+                  saleId: sale.id,
+                  paymentType: 'INSTALLMENT',
+                  amount: appliedExtra,
+                  paymentPlace: 'dhamen',
+                  notes: 'مستورد من ملف قديم (قسط)',
+                  paidAt: instPaidDate || new Date(currentDate),
+                }
+              });
+            }
  
             remainingToDistribute -= fullAmount;
             extraCash -= appliedExtra;
@@ -312,7 +344,6 @@ router.post('/excel', upload.single('file'), async (req: Request, res: Response)
 
         if (totalActualPaid > 0) {
           if (isCash) {
-            // For Cash sales, record as one full payment
             await prisma.payment.create({
               data: {
                 receiptNumber: `PAY-${Date.now()}-${i}-CASH`,
@@ -325,7 +356,6 @@ router.post('/excel', upload.single('file'), async (req: Request, res: Response)
               }
             });
           } else {
-            // 1. Record the Down Payment part if exists
             if (expectedDownPayment > 0) {
               await prisma.payment.create({
                 data: {
@@ -336,21 +366,6 @@ router.post('/excel', upload.single('file'), async (req: Request, res: Response)
                   paymentPlace: 'dhamen',
                   notes: 'مستورد من ملف قديم (مقدم)',
                   paidAt: saleDate || new Date(),
-                }
-              });
-            }
-
-            // 2. Record the Installment part if any (this is the 'paidAmount' column)
-            if (paidAmount > 0) {
-              await prisma.payment.create({
-                data: {
-                  receiptNumber: `PAY-${Date.now()}-${i}-INST`,
-                  saleId: sale.id,
-                  paymentType: 'INSTALLMENT',
-                  amount: paidAmount,
-                  paymentPlace: 'dhamen',
-                  notes: 'مستورد من ملف قديم (رصيد أقساط)',
-                  paidAt: lastPaymentDate || saleDate || new Date(),
                 }
               });
             }
