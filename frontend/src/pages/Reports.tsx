@@ -635,6 +635,7 @@ export default function Reports() {
                 <thead className="bg-slate-50">
                   <tr>
                     <th className="px-4 py-2.5 text-right text-xs font-medium text-slate-500">{ar.customers.name}</th>
+                    <th className="px-4 py-2.5 text-right text-xs font-medium text-slate-500">الإدارة</th>
                     <th className="px-4 py-2.5 text-right text-xs font-medium text-slate-500">رقم الماكينة</th>
                     <th className="px-4 py-2.5 text-right text-xs font-medium text-slate-500">النظام</th>
                     <th className="px-4 py-2.5 text-right text-xs font-medium text-slate-500">رقم العقد</th>
@@ -650,6 +651,7 @@ export default function Reports() {
                         <div className="font-medium">{inst.sale?.customer?.name}</div>
                         <div className="text-[10px] text-slate-400 font-mono">{inst.sale?.customer?.bkCode}</div>
                       </td>
+                      <td className="px-4 py-2.5 text-xs font-semibold text-slate-600">{inst.sale?.customer?.department || '-'}</td>
                       <td className="px-4 py-2.5 font-mono text-xs">{inst.sale?.machineSerial}</td>
                       <td className="px-4 py-2.5 text-xs">{inst.sale?.months} شهر</td>
                       <td className="px-4 py-2.5 font-mono text-sm">{inst.sale?.receiptNumber}</td>
@@ -697,6 +699,9 @@ export default function Reports() {
                         <tr key={inst.id} className="hover:bg-red-50/50">
                           <td className="px-4 py-2">
                              <div className="font-medium text-[11px]">{inst.sale?.customer?.name}</div>
+                             {inst.sale?.customer?.department && (
+                               <div className="text-[9px] text-slate-400 font-semibold">{inst.sale?.customer?.department}</div>
+                             )}
                           </td>
                           <td className="px-4 py-2 font-mono text-xs">{inst.sale?.receiptNumber}</td>
                           <td className="px-4 py-2">قسط {inst.installmentNo}</td>
