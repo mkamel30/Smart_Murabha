@@ -116,6 +116,7 @@ async function backfillPaymentIds(prisma: PrismaClient): Promise<void> {
         payment = await prisma.payment.findFirst({
           where: {
             saleId: inst.saleId,
+            paymentType: 'INSTALLMENT',
             receiptNumber: inst.receiptNumber
           }
         });
@@ -130,6 +131,7 @@ async function backfillPaymentIds(prisma: PrismaClient): Promise<void> {
         payment = await prisma.payment.findFirst({
           where: {
             saleId: inst.saleId,
+            paymentType: 'INSTALLMENT',
             paidAt: {
               gte: dayStart,
               lte: dayEnd
