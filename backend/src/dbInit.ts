@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS "MachineSale" (
 CREATE TABLE IF NOT EXISTS "Installment" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "saleId" TEXT NOT NULL,
+    "paymentId" TEXT,
     "installmentNo" INTEGER NOT NULL,
     "dueDate" DATETIME NOT NULL,
     "amount" DECIMAL NOT NULL,
@@ -54,7 +55,8 @@ CREATE TABLE IF NOT EXISTS "Installment" (
     "receiptNumber" TEXT,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "Installment_saleId_fkey" FOREIGN KEY ("saleId") REFERENCES "MachineSale" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    CONSTRAINT "Installment_saleId_fkey" FOREIGN KEY ("saleId") REFERENCES "MachineSale" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "Installment_paymentId_fkey" FOREIGN KEY ("paymentId") REFERENCES "Payment" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -99,7 +101,7 @@ CREATE INDEX IF NOT EXISTS "MachineSale_machineSerial_idx" ON "MachineSale"("mac
 CREATE INDEX IF NOT EXISTS "Installment_saleId_idx" ON "Installment"("saleId");
 CREATE INDEX IF NOT EXISTS "Installment_dueDate_idx" ON "Installment"("dueDate");
 CREATE INDEX IF NOT EXISTS "Installment_isPaid_idx" ON "Installment"("isPaid");
-CREATE UNIQUE INDEX IF NOT EXISTS "Payment_receiptNumber_key" ON "Payment"("receiptNumber");
+CREATE INDEX IF NOT EXISTS "Installment_paymentId_idx" ON "Installment"("paymentId");
 CREATE INDEX IF NOT EXISTS "Payment_saleId_idx" ON "Payment"("saleId");
 CREATE INDEX IF NOT EXISTS "Payment_paidAt_idx" ON "Payment"("paidAt");
 CREATE INDEX IF NOT EXISTS "Payment_receiptNumber_idx" ON "Payment"("receiptNumber");

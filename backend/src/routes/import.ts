@@ -306,6 +306,22 @@ router.post('/excel', upload.single('file'), async (req: Request, res: Response)
               ? (m === lastPaidIndex && lastPaymentDate ? lastPaymentDate : new Date(currentDate)) 
               : null;
  
+            let paymentId: string | null = null;
+            if (appliedExtra > 0) {
+              const createdPayment = await prisma.payment.create({
+                data: {
+                  receiptNumber: instReceiptNumber || `PAY-${Date.now()}-${i}-INST-${m}`,
+                  saleId: sale.id,
+                  paymentType: 'INSTALLMENT',
+                  amount: appliedExtra,
+                  paymentPlace: 'dhamen',
+                  notes: 'مستورد من ملف قديم (قسط)',
+                  paidAt: instPaidDate || new Date(currentDate),
+                }
+              });
+              paymentId = createdPayment.id;
+            }
+
             installments.push({
               saleId: sale.id,
               installmentNo: m,
@@ -317,21 +333,8 @@ router.post('/excel', upload.single('file'), async (req: Request, res: Response)
               waiveReason: null,
               paidDate: instPaidDate,
               receiptNumber: instReceiptNumber,
+              paymentId,
             });
-
-            if (appliedExtra > 0) {
-              await prisma.payment.create({
-                data: {
-                  receiptNumber: instReceiptNumber || `PAY-${Date.now()}-${i}-INST-${m}`,
-                  saleId: sale.id,
-                  paymentType: 'INSTALLMENT',
-                  amount: appliedExtra,
-                  paymentPlace: 'dhamen',
-                  notes: 'مستورد من ملف قديم (قسط)',
-                  paidAt: instPaidDate || new Date(currentDate),
-                }
-              });
-            }
  
             remainingToDistribute -= fullAmount;
             extraCash -= appliedExtra;

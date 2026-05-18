@@ -254,7 +254,7 @@ export class PaymentRepository {
   }
 
   async findByReceiptNumber(receiptNumber: string) {
-    return prisma.payment.findUnique({
+    return prisma.payment.findFirst({
       where: { receiptNumber },
     });
   }

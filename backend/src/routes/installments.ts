@@ -67,36 +67,46 @@ router.patch('/:id', async (req: Request, res: Response, next: NextFunction) => 
         }
       });
 
-      // 2. Synchronize with Payment table if there was an old receiptNumber
-      if (oldInstallment.receiptNumber) {
-        const newReceiptNumber = receiptNumber !== undefined ? receiptNumber : oldInstallment.receiptNumber;
-        const newPaidDate = paidDate ? new Date(paidDate) : oldInstallment.paidDate;
-
-        // Find the Payment record associated with the old receiptNumber for this sale
-        const payment = await tx.payment.findFirst({
+      // 2. Find linked Payment (by paymentId first, then by receiptNumber fallback)
+      let payment = null;
+      if (oldInstallment.paymentId) {
+        payment = await tx.payment.findUnique({ where: { id: oldInstallment.paymentId } });
+      }
+      if (!payment && oldInstallment.receiptNumber) {
+        payment = await tx.payment.findFirst({
           where: {
             saleId: oldInstallment.saleId,
             receiptNumber: oldInstallment.receiptNumber
           }
         });
+      }
 
-        if (payment) {
-          // Update the Payment record
-          await tx.payment.update({
-            where: { id: payment.id },
-            data: {
-              receiptNumber: newReceiptNumber,
-              paidAt: newPaidDate ? new Date(newPaidDate) : undefined
-            }
+      if (payment) {
+        const newReceiptNumber = receiptNumber !== undefined ? receiptNumber : oldInstallment.receiptNumber;
+        const newPaidDate = paidDate ? new Date(paidDate) : oldInstallment.paidDate;
+
+        await tx.payment.update({
+          where: { id: payment.id },
+          data: {
+            receiptNumber: newReceiptNumber || payment.receiptNumber,
+            paidAt: newPaidDate ? new Date(newPaidDate) : undefined
+          }
+        });
+
+        // Save the link if not already saved
+        if (!oldInstallment.paymentId) {
+          await tx.installment.update({
+            where: { id: req.params.id as string },
+            data: { paymentId: payment.id }
           });
         }
 
-        // Update any OTHER installments of this sale sharing the old receiptNumber
+        // Update any OTHER installments of this sale sharing the old payment
         if (receiptNumber !== undefined || paidDate !== undefined) {
           await tx.installment.updateMany({
             where: {
               saleId: oldInstallment.saleId,
-              receiptNumber: oldInstallment.receiptNumber,
+              paymentId: payment.id,
               id: { not: req.params.id as string }
             },
             data: {

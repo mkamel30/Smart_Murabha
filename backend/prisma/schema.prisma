@@ -64,6 +64,7 @@ model MachineSale {
 model Installment {
   id              String     @id @default(uuid())
   saleId          String
+  paymentId       String?
   installmentNo   Int
   dueDate         DateTime
   amount          Decimal
@@ -77,15 +78,17 @@ model Installment {
   updatedAt       DateTime   @updatedAt
 
   sale            MachineSale @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  payment         Payment?    @relation(fields: [paymentId], references: [id], onDelete: SetNull)
 
   @@index([saleId])
   @@index([dueDate])
   @@index([isPaid])
+  @@index([paymentId])
 }
 
 model Payment {
   id              String      @id @default(uuid())
-  receiptNumber   String      @unique
+  receiptNumber   String
   saleId          String
   paymentType     String
   amount          Decimal
@@ -96,6 +99,7 @@ model Payment {
   updatedAt       DateTime    @updatedAt
 
   sale            MachineSale @relation(fields: [saleId], references: [id])
+  installments    Installment[]
 
   @@index([saleId])
   @@index([paidAt])

@@ -192,8 +192,9 @@ export class SaleService {
         });
 
         // 2. Record the excess as an Installment payment if any
+        let excessPayment: any = null;
         if (instToRecord > 0) {
-          await tx.payment.create({
+          excessPayment = await tx.payment.create({
             data: {
               receiptNumber: `PAY-EX-${Date.now()}`,
               saleId: sale.id,
@@ -229,7 +230,8 @@ export class SaleService {
                   paidAmount: isFullyPaid ? inst.amount : applied,
                   isPaid: isFullyPaid,
                   paidDate: isFullyPaid ? lastDepositDate : null,
-                  receiptNumber: isFullyPaid ? payReceipt : null
+                  receiptNumber: isFullyPaid ? payReceipt : null,
+                  paymentId: excessPayment ? excessPayment.id : null
                 }
               });
               installmentCash -= applied;
@@ -264,6 +266,7 @@ export class SaleService {
         waiveReason: null,
         paidDate: null,
         receiptNumber: null,
+        paymentId: null,
       });
       remainingTotal -= amt;
     }
@@ -311,7 +314,7 @@ export class SaleService {
       if (!freshSale) throw new Error('البيع غير موجود');
       if (freshSale.status === 'VOIDED') throw new Error('لا يمكن تسجيل دفعة لبيع ملغى');
 
-      await tx.payment.create({
+      const createdPayment = await tx.payment.create({
         data: {
           receiptNumber,
           saleId,
@@ -369,6 +372,7 @@ export class SaleService {
             isPaid: item.isPaid,
             paidDate: item.isPaid ? paymentDate : item.paidDate,
             receiptNumber: item.isPaid ? receiptNumber : item.receiptNumber,
+            paymentId: item.appliedAmount > 0 ? createdPayment.id : undefined,
           },
         });
       }
@@ -457,7 +461,8 @@ export class SaleService {
           paidAmount: 0,
           isPaid: false,
           paidDate: null,
-          receiptNumber: null
+          receiptNumber: null,
+          paymentId: null
         }
       });
 
@@ -509,6 +514,7 @@ export class SaleService {
                   isPaid: isFullyPaid,
                   paidDate: isFullyPaid ? p.paidAt : inst.paidDate,
                   receiptNumber: isFullyPaid ? p.receiptNumber : inst.receiptNumber,
+                  paymentId: p.id
                 },
               });
               remainingToDistribute -= paymentForThis;
@@ -728,6 +734,7 @@ export class SaleService {
                 isPaid: isFullyPaid,
                 paidDate: isFullyPaid ? p.paidAt : inst.paidDate,
                 receiptNumber: isFullyPaid ? p.receiptNumber : inst.receiptNumber,
+                paymentId: p.id
               }
             });
             remToDistribute -= paymentForThis;

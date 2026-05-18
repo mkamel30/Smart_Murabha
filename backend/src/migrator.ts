@@ -28,6 +28,15 @@ const MIGRATIONS: Migration[] = [
     sql: [
       `ALTER TABLE Customer ADD COLUMN department TEXT;`
     ]
+  },
+  {
+    version: '1.0.3',
+    description: 'ربط مباشر بين القسط والدفعة والسماح بتكرار رقم إيصال الدفعة',
+    sql: [
+      `ALTER TABLE Installment ADD COLUMN paymentId TEXT REFERENCES Payment(id) ON DELETE SET NULL;`,
+      `CREATE INDEX IF NOT EXISTS "Installment_paymentId_idx" ON "Installment"("paymentId");`,
+      `DROP INDEX IF EXISTS "Payment_receiptNumber_key";`
+    ]
   }
 ];
 
@@ -74,8 +83,73 @@ export async function runMigrations(prisma: PrismaClient): Promise<void> {
       console.log(`✅ Migration ${migration.version} applied successfully`);
     }
 
+    // Run data backfill to link existing records
+    await backfillPaymentIds(prisma);
+
     console.log('✅ All migrations check completed.');
   } catch (error) {
     console.error('❌ Migration system failed:', error);
   }
 }
+
+async function backfillPaymentIds(prisma: PrismaClient): Promise<void> {
+  console.log('🔄 Running data backfill for Installment ↔ Payment links...');
+  try {
+    const installments = await prisma.installment.findMany({
+      where: {
+        paymentId: null,
+        OR: [
+          { isPaid: true },
+          { paidAmount: { gt: 0 } },
+          { receiptNumber: { not: null } }
+        ]
+      } as any
+    });
+
+    console.log(`ℹ️ Found ${installments.length} installments needing link backfill.`);
+    
+    let linkedCount = 0;
+    for (const inst of installments) {
+      let payment = null;
+
+      if (inst.receiptNumber) {
+        payment = await prisma.payment.findFirst({
+          where: {
+            saleId: inst.saleId,
+            receiptNumber: inst.receiptNumber
+          }
+        });
+      }
+
+      if (!payment && inst.paidDate) {
+        const dayStart = new Date(inst.paidDate);
+        dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = new Date(inst.paidDate);
+        dayEnd.setHours(23, 59, 59, 999);
+
+        payment = await prisma.payment.findFirst({
+          where: {
+            saleId: inst.saleId,
+            paidAt: {
+              gte: dayStart,
+              lte: dayEnd
+            }
+          }
+        });
+      }
+
+      if (payment) {
+        await prisma.installment.update({
+          where: { id: inst.id },
+          data: { paymentId: payment.id } as any
+        });
+        linkedCount++;
+      }
+    }
+
+    console.log(`✅ Linked ${linkedCount} existing installments to their payments.`);
+  } catch (err) {
+    console.error('❌ Backfill failed:', err);
+  }
+}
+

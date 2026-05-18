@@ -42,6 +42,7 @@ export interface MachineSale {
 export interface Installment {
   id: string;
   saleId: string;
+  paymentId?: string;
   installmentNo: number;
   dueDate: string;
   amount: number;
@@ -54,6 +55,7 @@ export interface Installment {
   createdAt: string;
   updatedAt: string;
   sale?: MachineSale;
+  payment?: Payment;
 }
 
 export interface Payment {
@@ -68,6 +70,7 @@ export interface Payment {
   createdAt: string;
   updatedAt: string;
   sale?: MachineSale;
+  installments?: Installment[];
 }
 
 export interface FollowUp {

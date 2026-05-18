@@ -263,8 +263,9 @@ export default function SaleDetail() {
       setShowEditInstModal(false);
       setEditingInst(null);
       loadSale();
-    } catch (err: unknown) {
-      showToast(ar.common.error, 'error');
+    } catch (err: any) {
+      const errMsg = err.response?.data?.error || ar.common.error;
+      showToast(errMsg, 'error');
     }
   };
 
