@@ -106,6 +106,31 @@ router.patch('/:id', async (req: Request, res: Response, next: NextFunction) => 
         });
       }
 
+      // If no linked payment exists but the installment is paid, automatically create a Payment record
+      if (!payment && inst.isPaid) {
+        const paymentDate = paidDate ? new Date(paidDate) : (oldInstallment.paidDate || new Date());
+        const paymentAmount = paidAmount !== undefined ? Number(paidAmount) : Number(inst.paidAmount || inst.amount);
+        const finalReceiptNumber = receiptNumber !== undefined ? receiptNumber : (inst.receiptNumber || 'بدون إيصال');
+
+        payment = await tx.payment.create({
+          data: {
+            saleId: oldInstallment.saleId,
+            amount: paymentAmount,
+            paymentType: 'INSTALLMENT',
+            paymentPlace: 'BRANCH',
+            receiptNumber: finalReceiptNumber,
+            paidAt: paymentDate,
+            notes: 'تم إنشاؤه تلقائياً عند تحديث القسط'
+          }
+        });
+
+        // Link the current installment to the new payment
+        await tx.installment.update({
+          where: { id: req.params.id as string },
+          data: { paymentId: payment.id } as any
+        });
+      }
+
       if (payment) {
         const newReceiptNumber = receiptNumber !== undefined ? receiptNumber : oldInstallment.receiptNumber;
         const newPaidDate = paidDate ? new Date(paidDate) : oldInstallment.paidDate;

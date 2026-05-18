@@ -144,6 +144,33 @@ async function backfillPaymentIds(prisma: PrismaClient): Promise<void> {
           data: { paymentId: payment.id } as any
         });
         linkedCount++;
+      } else if (inst.isPaid || Number(inst.paidAmount) > 0) {
+        // Auto-create missing Payment record for paid legacy installment
+        const paymentDate = inst.paidDate ? new Date(inst.paidDate) : new Date();
+        const paymentAmount = Number(inst.paidAmount) > 0 ? Number(inst.paidAmount) : Number(inst.amount);
+        const finalReceiptNumber = inst.receiptNumber || 'بدون إيصال';
+
+        try {
+          const newPayment = await prisma.payment.create({
+            data: {
+              saleId: inst.saleId,
+              amount: paymentAmount,
+              paymentType: 'INSTALLMENT',
+              paymentPlace: 'BRANCH',
+              receiptNumber: finalReceiptNumber,
+              paidAt: paymentDate,
+              notes: 'تم إنشاؤه تلقائياً بواسطة نظام تصحيح البيانات'
+            }
+          });
+
+          await prisma.installment.update({
+            where: { id: inst.id },
+            data: { paymentId: newPayment.id } as any
+          });
+          linkedCount++;
+        } catch (createErr) {
+          console.error(`❌ Failed to auto-create payment for legacy installment ${inst.id}:`, createErr);
+        }
       }
     }
 
