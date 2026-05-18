@@ -94,8 +94,8 @@ router.patch('/:id', async (req: Request, res: Response, next: NextFunction) => 
 
       // 2. Find linked Payment (by paymentId first, then by receiptNumber fallback)
       let payment = null;
-      if (oldInstallment.paymentId) {
-        payment = await tx.payment.findUnique({ where: { id: oldInstallment.paymentId } });
+      if ((oldInstallment as any).paymentId) {
+        payment = await tx.payment.findUnique({ where: { id: (oldInstallment as any).paymentId } });
       }
       if (!payment && oldInstallment.receiptNumber) {
         payment = await tx.payment.findFirst({
@@ -119,10 +119,10 @@ router.patch('/:id', async (req: Request, res: Response, next: NextFunction) => 
         });
 
         // Save the link if not already saved
-        if (!oldInstallment.paymentId) {
+        if (!(oldInstallment as any).paymentId) {
           await tx.installment.update({
             where: { id: req.params.id as string },
-            data: { paymentId: payment.id }
+            data: { paymentId: payment.id } as any
           });
         }
 
@@ -133,7 +133,7 @@ router.patch('/:id', async (req: Request, res: Response, next: NextFunction) => 
               saleId: oldInstallment.saleId,
               paymentId: payment.id,
               id: { not: req.params.id as string }
-            },
+            } as any,
             data: {
               receiptNumber: newReceiptNumber,
               paidDate: newPaidDate

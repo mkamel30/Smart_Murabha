@@ -232,7 +232,7 @@ export class SaleService {
                   paidDate: isFullyPaid ? lastDepositDate : null,
                   receiptNumber: isFullyPaid ? payReceipt : null,
                   paymentId: excessPayment ? excessPayment.id : null
-                }
+                } as any
               });
               installmentCash -= applied;
             }
@@ -267,7 +267,7 @@ export class SaleService {
         paidDate: null,
         receiptNumber: null,
         paymentId: null,
-      });
+      } as any);
       remainingTotal -= amt;
     }
 
@@ -388,7 +388,7 @@ export class SaleService {
             paidDate: item.isPaid ? paymentDate : item.paidDate,
             receiptNumber: item.isPaid ? receiptNumber : item.receiptNumber,
             paymentId: item.appliedAmount > 0 ? createdPayment.id : undefined,
-          },
+          } as any,
         });
       }
 
@@ -750,7 +750,7 @@ export class SaleService {
                 paidDate: isFullyPaid ? p.paidAt : inst.paidDate,
                 receiptNumber: isFullyPaid ? p.receiptNumber : inst.receiptNumber,
                 paymentId: p.id
-              }
+              } as any
             });
             remToDistribute -= paymentForThis;
           }
