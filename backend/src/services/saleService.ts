@@ -297,9 +297,24 @@ export class SaleService {
     }
 
     if (customReceiptNumber) {
-      const existingReceipt = await paymentRepo.findByReceiptNumber(customReceiptNumber);
-      if (existingReceipt) {
-        const error = new Error('رقم إيصال الدفع مستخدم بالفعل') as Error & { statusCode: number };
+      const existingReceipt = await prisma.payment.findFirst({
+        where: { 
+          receiptNumber: customReceiptNumber,
+          saleId: { not: saleId }
+        },
+        include: {
+          sale: {
+            include: {
+              customer: true
+            }
+          }
+        }
+      });
+
+      if (existingReceipt && existingReceipt.sale) {
+        const customer = existingReceipt.sale.customer;
+        const machineSerial = existingReceipt.sale.machineSerial;
+        const error = new Error(`رقم الإيصال هذا تم استخدامه مسبقاً مع العميل: ${customer.name} (كود: ${customer.bkCode}) للماكينة رقم: ${machineSerial}`) as Error & { statusCode: number };
         error.statusCode = 400;
         throw error;
       }

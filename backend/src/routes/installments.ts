@@ -55,6 +55,31 @@ router.patch('/:id', async (req: Request, res: Response, next: NextFunction) => 
       return res.status(404).json({ error: 'القسط غير موجود' });
     }
 
+    // Check if new receiptNumber is already used in a different sale
+    if (receiptNumber && receiptNumber !== oldInstallment.receiptNumber) {
+      const existingPayment = await prisma.payment.findFirst({
+        where: { 
+          receiptNumber: receiptNumber,
+          saleId: { not: oldInstallment.saleId }
+        },
+        include: {
+          sale: {
+            include: {
+              customer: true
+            }
+          }
+        }
+      });
+
+      if (existingPayment && existingPayment.sale) {
+        const customer = existingPayment.sale.customer;
+        const machineSerial = existingPayment.sale.machineSerial;
+        return res.status(400).json({ 
+          error: `رقم الإيصال هذا تم استخدامه مسبقاً مع العميل: ${customer.name} (كود: ${customer.bkCode}) للماكينة رقم: ${machineSerial}` 
+        });
+      }
+    }
+
     const updatedInstallment = await prisma.$transaction(async (tx) => {
       // 1. Update target installment
       const inst = await tx.installment.update({
