@@ -49,7 +49,7 @@ export const installmentsApi = {
   getBySale: (saleId: string) => api.get('/installments', { params: { saleId } }).then(r => r.data),
   pay: (id: string, data: { amount: number; receiptNumber?: string; paymentPlace?: string }) => 
     api.post(`/installments/${id}/pay`, data).then(r => r.data),
-  update: (id: string, data: Partial<{ receiptNumber: string; paidDate: string | null; isPaid: boolean; paidAmount: number }>) => 
+  update: (id: string, data: Partial<{ receiptNumber: string; paidDate: string | null; isPaid: boolean; paidAmount: number; paymentPlace: string }>) => 
     api.patch(`/installments/${id}`, data).then(r => r.data),
   getOverdue: () => api.get('/installments/overdue').then(r => r.data),
 };

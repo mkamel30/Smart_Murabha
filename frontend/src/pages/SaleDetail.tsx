@@ -58,6 +58,7 @@ export default function SaleDetail() {
     receiptNumber: string;
     paidDate: string;
     installmentNo: number;
+    paymentPlace?: string;
   } | null>(null);
 
   useEffect(() => {
@@ -258,6 +259,7 @@ export default function SaleDetail() {
       await installmentsApi.update(editingInst.id, {
         receiptNumber: editingInst.receiptNumber,
         paidDate: editingInst.paidDate,
+        paymentPlace: editingInst.paymentPlace,
       });
       showToast(ar.common.success, 'success');
       setShowEditInstModal(false);
@@ -270,11 +272,13 @@ export default function SaleDetail() {
   };
 
   const openEditInstModal = (inst: any) => {
+    const linkedPayment = sale?.payments?.find((p: any) => p.id === inst.paymentId || (inst.receiptNumber && p.receiptNumber === inst.receiptNumber));
     setEditingInst({
       id: inst.id,
       receiptNumber: inst.receiptNumber || '',
       paidDate: inst.paidDate ? new Date(inst.paidDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-      installmentNo: inst.installmentNo
+      installmentNo: inst.installmentNo,
+      paymentPlace: linkedPayment?.paymentPlace || 'dhamen'
     });
     setShowEditInstModal(true);
   };
@@ -845,6 +849,13 @@ export default function SaleDetail() {
               onChange={(e) => setEditingInst(prev => prev ? { ...prev, paidDate: e.target.value } : null)}
               className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#0A2472]/20 focus:border-[#0A2472]"
               required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">مكان الدفع</label>
+            <PaymentPlaceSelect
+              value={editingInst?.paymentPlace || 'dhamen'}
+              onChange={(value) => setEditingInst(prev => prev ? { ...prev, paymentPlace: value } : null)}
             />
           </div>
           <div className="flex justify-end gap-2 pt-2">
