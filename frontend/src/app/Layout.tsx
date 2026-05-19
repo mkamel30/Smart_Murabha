@@ -12,7 +12,8 @@ import {
   BarChart3,
   Menu,
   Settings,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Activity
 } from 'lucide-react';
 import { Footer } from '@/components/Footer';
 
@@ -80,6 +81,7 @@ export default function Layout() {
                 { path: '/installments', label: ar.nav.installments, icon: Calendar },
                 { path: '/payments', label: ar.nav.payments, icon: CreditCard },
                 { path: '/reports', label: ar.nav.reports, icon: BarChart3 },
+                { path: '/analytics', label: ar.nav.analytics, icon: Activity },
               ].map((item) => (
                 <NavLink
                   key={item.path}

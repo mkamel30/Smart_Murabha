@@ -25,7 +25,7 @@ import backupRouter from './routes/backup.js';
 import adminRouter from './routes/admin.js';
 import rewardsRouter from './routes/rewards.js';
 import branchRouter from './routes/branch.js';
-
+import analyticsRouter from './routes/analytics.js';
 // Fix for dual ESM/CJS compatibility
 const _filename = typeof __filename !== 'undefined' ? __filename : fileURLToPath((import.meta as any).url);
 const _dirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(_filename);
@@ -85,6 +85,7 @@ app.use('/api/backup', (req, res, next) => {
 app.use('/api/admin', adminRouter);
 app.use('/api/rewards', rewardsRouter);
 app.use('/api/branch', branchRouter);
+app.use('/api/analytics', analyticsRouter);
 
 import prisma from './lib/prisma.js';
 import { runMigrations } from './migrator.js';

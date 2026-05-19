@@ -149,4 +149,9 @@ export const branchApi = {
     api.get('/branch/export-monthly', { params: { month, year }, responseType: 'blob' }).then(r => r),
 };
 
+export const analyticsApi = {
+  getDashboardData: (filters?: { startDate?: string; endDate?: string }) => 
+    api.get('/analytics/dashboard', { params: filters }).then(r => r.data),
+};
+
 export default api;

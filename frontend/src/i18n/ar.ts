@@ -52,6 +52,7 @@ export const ar = {
     reports: 'التقارير',
     settings: 'الإعدادات',
     import: 'استيراد',
+    analytics: 'التحليلات',
   },
   customers: {
     title: 'العملاء',

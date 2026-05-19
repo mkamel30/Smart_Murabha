@@ -12,6 +12,7 @@ import FollowUps from '@/pages/FollowUps';
 import Reports from '@/pages/Reports';
 import Settings from '@/pages/Settings';
 import ImportPage from '@/pages/Import';
+import Analytics from '@/pages/Analytics';
 import { ar } from '@/i18n/ar';
 import { PrimaryButton } from '@/lib/Actions';
 import { useNavigate } from 'react-router-dom';
@@ -44,6 +45,7 @@ export default function App() {
             <Route path="payments" element={<Payments />} />
             <Route path="followups" element={<FollowUps />} />
             <Route path="reports" element={<Reports />} />
+            <Route path="analytics" element={<Analytics />} />
             <Route path="settings" element={<Settings />} />
             <Route path="import" element={<ImportPage />} />
             <Route path="*" element={<NotFound />} />
