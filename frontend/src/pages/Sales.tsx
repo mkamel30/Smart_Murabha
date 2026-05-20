@@ -217,7 +217,7 @@ export default function Sales() {
               {filteredSales.map((sale) => (
                 <tr key={sale.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <span className="font-mono text-sm text-gray-700">{sale.receiptNumber}</span>
+                    <span className="font-mono text-sm text-gray-700">{sale.downPaymentReceipt || sale.receiptNumber}</span>
                   </td>
                   <td className="px-4 py-3">
                     <span className="font-medium text-gray-900">{sale.customer?.name} ({sale.customer?.bkCode})</span>

@@ -325,7 +325,7 @@ export default function SaleDetail() {
           </SecondaryButton>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-          <div><span className="text-gray-500 text-sm">{ar.sales.receiptNumber}:</span> <span className="font-mono">{sale.receiptNumber}</span></div>
+          <div><span className="text-gray-500 text-sm">{ar.sales.receiptNumber}:</span> <span className="font-mono">{sale.downPaymentReceipt || sale.receiptNumber}</span></div>
           <div><span className="text-gray-500 text-sm">{ar.sales.machineSerial}:</span> <span className="font-mono">{sale.machineSerial}</span></div>
           <div><span className="text-gray-500 text-sm">{ar.sales.saleType}:</span> <span className="font-medium">{sale.saleType === 'CASH' ? ar.sales.cash : ar.sales.installment}</span></div>
           <div><span className="text-gray-500 text-sm">{ar.sales.saleDate}:</span> {formatDate(sale.saleDate)}</div>
