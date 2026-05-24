@@ -5,8 +5,9 @@ import type { Payment } from '@/types';
 import { ar } from '@/i18n/ar';
 import { useToast } from '@/lib/toast';
 import { LoadingScreen } from '@/lib/Spinner';
-import { SecondaryButton, DangerButton, PageHeader, EmptyState, TableActions } from '@/lib/Actions';
+import { PrimaryButton, SecondaryButton, PageHeader, EmptyState, TableActions } from '@/lib/Actions';
 import { SearchFilterBar } from '@/lib/SearchFilterBar';
+import { Modal } from '@/lib/Modal';
 
 type PaymentTypeFilter = '' | 'CASH_SALE' | 'DOWN_PAYMENT' | 'INSTALLMENT';
 
@@ -16,8 +17,10 @@ export default function Payments() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<PaymentTypeFilter>('');
-  const [isVoiding, setIsVoiding] = useState<string | null>(null);
   const [groupBy, setGroupBy] = useState<'none' | 'customer' | 'month'>('none');
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingPayment, setEditingPayment] = useState<{ id: string; receiptNumber: string; paidAt: string } | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
     loadPayments();
@@ -78,18 +81,32 @@ export default function Payments() {
     }
   };
 
-  const handleVoid = async (paymentId: string) => {
-    if (!confirm('هل أنت متأكد من رغبتك في إلغاء هذه العملية؟ سيتم التراجع عن تحصيل المبالغ والأقساط المرتبطة بها.')) return;
-    
-    setIsVoiding(paymentId);
+  const handleEditClick = (payment: Payment) => {
+    setEditingPayment({
+      id: payment.id,
+      receiptNumber: payment.receiptNumber || '',
+      paidAt: payment.paidAt ? new Date(payment.paidAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+    });
+    setShowEditModal(true);
+  };
+
+  const handleUpdatePayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPayment) return;
+    setIsUpdating(true);
     try {
-      await paymentsApi.void(paymentId);
-      showToast('تم إلغاء الدفع وإعادة توزيع الأرصدة بنجاح', 'success');
+      await paymentsApi.update(editingPayment.id, {
+        receiptNumber: editingPayment.receiptNumber,
+        paidAt: editingPayment.paidAt,
+      });
+      showToast('تم تحديث بيانات الدفعة بنجاح', 'success');
+      setShowEditModal(false);
+      setEditingPayment(null);
       loadPayments();
     } catch (err: any) {
-      showToast(err.response?.data?.error || 'فشل إلغاء العملية', 'error');
+      showToast(err.response?.data?.error || 'فشل تحديث البيانات', 'error');
     } finally {
-      setIsVoiding(null);
+      setIsUpdating(false);
     }
   };
 
@@ -201,18 +218,14 @@ export default function Payments() {
                    <td className="px-4 py-3">{formatPaymentPlace(payment.paymentPlace)}</td>
                    <td className="px-4 py-3">{formatDate(payment.paidAt)}</td>
                    <td className="px-4 py-3">
-                     <TableActions>
-                       <SecondaryButton size="sm" onClick={() => handlePrintReceipt(payment.id)}>
-                         {ar.payments.printReceipt}
-                       </SecondaryButton>
-                       <DangerButton 
-                         size="sm" 
-                         onClick={() => handleVoid(payment.id)}
-                         disabled={isVoiding === payment.id}
-                       >
-                         {isVoiding === payment.id ? ar.common.loading : 'إلغاء'}
-                       </DangerButton>
-                     </TableActions>
+                      <TableActions>
+                        <SecondaryButton size="sm" onClick={() => handlePrintReceipt(payment.id)}>
+                          {ar.payments.printReceipt}
+                        </SecondaryButton>
+                        <SecondaryButton size="sm" onClick={() => handleEditClick(payment)}>
+                          تعديل
+                        </SecondaryButton>
+                      </TableActions>
                    </td>
                  </tr>
                ))}
@@ -292,13 +305,7 @@ export default function Payments() {
                         <td className="px-4 py-2">
                            <div className="flex justify-center gap-2">
                               <button onClick={() => handlePrintReceipt(pay.id)} className="text-blue-600 hover:text-blue-800 text-xs">طباعة</button>
-                              <button 
-                                onClick={() => handleVoid(pay.id)} 
-                                disabled={isVoiding === pay.id}
-                                className="text-red-600 hover:text-red-800 text-xs"
-                              >
-                                {isVoiding === pay.id ? '...' : 'إلغاء'}
-                              </button>
+                              <button onClick={() => handleEditClick(pay)} className="text-amber-600 hover:text-amber-800 text-xs">تعديل</button>
                            </div>
                         </td>
                       </tr>
@@ -311,6 +318,46 @@ export default function Payments() {
           {filteredPayments.length === 0 && <EmptyState message={ar.common.noData} />}
         </div>
       )}
+
+      {/* Edit Payment Modal */}
+      <Modal 
+        isOpen={showEditModal} 
+        onClose={() => { setShowEditModal(false); setEditingPayment(null); }} 
+        title="تعديل بيانات التحصيل"
+      >
+        {editingPayment && (
+          <form onSubmit={handleUpdatePayment} className="space-y-4">
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">رقم الإيداع / الإيصال</label>
+              <input
+                type="text"
+                value={editingPayment.receiptNumber}
+                onChange={(e) => setEditingPayment({ ...editingPayment, receiptNumber: e.target.value })}
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#0A2472]/20 focus:border-[#0A2472]"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">تاريخ الإيداع</label>
+              <input
+                type="date"
+                value={editingPayment.paidAt}
+                onChange={(e) => setEditingPayment({ ...editingPayment, paidAt: e.target.value })}
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#0A2472]/20 focus:border-[#0A2472]"
+                required
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <SecondaryButton type="button" onClick={() => { setShowEditModal(false); setEditingPayment(null); }}>
+                إلغاء
+              </SecondaryButton>
+              <PrimaryButton type="submit" disabled={isUpdating}>
+                {isUpdating ? 'جاري الحفظ...' : 'حفظ التعديلات'}
+              </PrimaryButton>
+            </div>
+          </form>
+        )}
+      </Modal>
     </div>
   );
 }

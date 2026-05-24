@@ -262,6 +262,10 @@ export class PaymentRepository {
   async create(data: Omit<Payment, 'id' | 'createdAt' | 'updatedAt'>) {
     return prisma.payment.create({ data });
   }
+
+  async update(id: string, data: Partial<Omit<Payment, 'id' | 'createdAt' | 'updatedAt'>>) {
+    return prisma.payment.update({ where: { id }, data });
+  }
 }
 
 export class FollowUpRepository {

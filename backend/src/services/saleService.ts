@@ -655,7 +655,7 @@ export class SaleService {
     return saleRepo.findById(id);
   }
 
-  async fullRecalculate(id: string, updates: { firstDueDate?: Date | string; months?: number; downPayment?: number; downPaymentReceipt?: string; totalPrice?: number }) {
+  async fullRecalculate(id: string, updates: { firstDueDate?: Date | string; saleDate?: Date | string; months?: number; downPayment?: number; downPaymentReceipt?: string; totalPrice?: number }) {
     const sale = await saleRepo.findById(id);
     if (!sale) throw new Error('البيع غير موجود');
     if (sale.status === 'VOIDED') throw new Error('لا يمكن تعديل بيع ملغى');
@@ -664,6 +664,7 @@ export class SaleService {
     const newTotalPrice = updates.totalPrice !== undefined ? updates.totalPrice : Number(sale.totalPrice);
     const newDownPayment = updates.downPayment !== undefined ? updates.downPayment : Number(sale.downPayment);
     const newMonths = updates.months !== undefined ? updates.months : Number(sale.months);
+    const newSaleDate = updates.saleDate ? new Date(updates.saleDate) : sale.saleDate;
     const newFirstDueDate = updates.firstDueDate ? new Date(updates.firstDueDate) : sale.firstDueDate;
     const newDownPaymentReceipt = updates.downPaymentReceipt !== undefined ? updates.downPaymentReceipt : sale.downPaymentReceipt;
 
@@ -681,7 +682,7 @@ export class SaleService {
       const newInstallments = [];
       let remainingToDistribute = totalToInstall;
       for (let i = 1; i <= newMonths; i++) {
-        const dueDate = newFirstDueDate ? addMonths(new Date(newFirstDueDate), i - 1) : addMonths(new Date(sale.saleDate), i);
+        const dueDate = newFirstDueDate ? addMonths(new Date(newFirstDueDate), i - 1) : addMonths(new Date(newSaleDate), i);
         const amt = i === newMonths ? Math.round(remainingToDistribute * 100) / 100 : installmentAmount;
         newInstallments.push({
           saleId: id,
@@ -706,6 +707,7 @@ export class SaleService {
           totalPrice: newTotalPrice,
           downPayment: newDownPayment,
           months: newMonths,
+          saleDate: newSaleDate,
           firstDueDate: newFirstDueDate,
           downPaymentReceipt: newDownPaymentReceipt,
           paidAmount: 0,

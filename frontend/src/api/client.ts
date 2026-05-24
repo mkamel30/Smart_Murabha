@@ -40,7 +40,7 @@ export const salesApi = {
   void: (id: string, reason: string) => api.post(`/sales/${id}/void`, { reason }).then(r => r.data),
   pay: (saleId: string, data: unknown) => api.post(`/sales/${saleId}/pay`, data).then(r => r.data),
   previewPayment: (id: string, amount: number, installmentIds?: string[]) => api.post(`/sales/${id}/preview-payment`, { amount, installmentIds }).then(r => r.data),
-  fullRecalculate: (id: string, data: { firstDueDate?: string; months?: number; downPayment?: number; downPaymentReceipt?: string; totalPrice?: number }) => api.post(`/sales/${id}/full-recalculate`, data).then(r => r.data),
+  fullRecalculate: (id: string, data: { firstDueDate?: string; saleDate?: string; months?: number; downPayment?: number; downPaymentReceipt?: string; totalPrice?: number }) => api.post(`/sales/${id}/full-recalculate`, data).then(r => r.data),
 };
 
 export const installmentsApi = {
@@ -64,6 +64,7 @@ export const paymentsApi = {
     api.get('/payments', { params: filters }).then(r => r.data),
   getById: (id: string) => api.get(`/payments/${id}`).then(r => r.data),
   void: (id: string) => api.post(`/payments/${id}/void`).then(r => r.data),
+  update: (id: string, data: { receiptNumber?: string; paidAt?: string }) => api.put(`/payments/${id}`, data).then(r => r.data),
 };
 
 export const followupsApi = {

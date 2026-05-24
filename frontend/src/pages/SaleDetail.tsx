@@ -207,7 +207,8 @@ export default function SaleDetail() {
       Number(editSaleForm.totalPrice) !== Number(sale.totalPrice) ||
       Number(editSaleForm.downPayment) !== Number(sale.downPayment) ||
       Number(editSaleForm.months) !== Number(sale.months) ||
-      (editSaleForm.firstDueDate && editSaleForm.firstDueDate !== (sale.firstDueDate ? new Date(sale.firstDueDate).toISOString().split('T')[0] : '')) ||
+      (editSaleForm.firstDueDate !== (sale.firstDueDate ? new Date(sale.firstDueDate).toISOString().split('T')[0] : '')) ||
+      (editSaleForm.saleDate !== (sale.saleDate ? new Date(sale.saleDate).toISOString().split('T')[0] : '')) ||
       editSaleForm.downPaymentReceipt !== (sale.downPaymentReceipt || '')
     );
 
@@ -221,6 +222,7 @@ export default function SaleDetail() {
           downPayment: Number(editSaleForm.downPayment),
           months: Number(editSaleForm.months),
           firstDueDate: editSaleForm.firstDueDate || undefined,
+          saleDate: editSaleForm.saleDate,
           downPaymentReceipt: editSaleForm.downPaymentReceipt
         });
       }

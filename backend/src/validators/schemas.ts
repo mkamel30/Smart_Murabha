@@ -70,6 +70,7 @@ export const recalculateInstallmentsSchema = z.object({
 
 export const fullRecalculateSchema = z.object({
   firstDueDate: z.string().optional(),
+  saleDate: z.string().optional(),
   months: z.number().int().positive('عدد الأشهر يجب أن يكون رقماً موجباً').max(120, 'عدد الأشهر يجب أن لا يتجاوز 120').optional(),
   downPayment: z.number().min(0, 'المقدم لا يمكن أن يكون سالباً').optional(),
   downPaymentReceipt: z.string().optional(),
