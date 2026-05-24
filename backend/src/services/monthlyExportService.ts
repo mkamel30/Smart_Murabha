@@ -95,6 +95,10 @@ interface CustomerSummaryDetail {
   paidThisMonth: number;
   overdueCount: number;
   overdueAmount: number;
+  downPayment?: number;
+  totalInstallments?: number;
+  installmentAmount?: number;
+  installmentSystem?: string;
 }
 
 export class MonthlyExportService {
@@ -260,7 +264,13 @@ export class MonthlyExportService {
     });
 
     // Customer summary: group by customer across all active sales
-    const customerMap = new Map<string, CustomerSummaryDetail>();
+    const customerMap = new Map<string, CustomerSummaryDetail & {
+      tempSales?: Array<{
+        downPayment: number;
+        totalInstallments: number;
+        installmentAmount: number;
+      }>;
+    }>();
     for (const sale of activeSales) {
       const cid = sale.customerId;
       if (!customerMap.has(cid)) {
@@ -277,6 +287,7 @@ export class MonthlyExportService {
           paidThisMonth: 0,
           overdueCount: 0,
           overdueAmount: 0,
+          tempSales: [],
         });
       }
       const cs = customerMap.get(cid)!;
@@ -284,6 +295,13 @@ export class MonthlyExportService {
       cs.totalContractValue += Math.round(Number(sale.totalPrice));
       cs.totalPaid += Math.round(Number(sale.paidAmount));
       cs.totalRemaining += Math.round(Number(sale.remainingAmount));
+
+      const dp = Math.round(Number(sale.downPayment));
+      const totalInstallments = sale.months || 0;
+      const installmentAmount = sale.installments.length > 0 ? Math.round(Number(sale.installments[0].amount)) : 0;
+      if (cs.tempSales) {
+        cs.tempSales.push({ downPayment: dp, totalInstallments, installmentAmount });
+      }
     }
 
     // Add due/paid/overdue info per customer
@@ -305,6 +323,39 @@ export class MonthlyExportService {
         cs.overdueCount++;
         cs.overdueAmount += Math.round(Number(inst.amount) - Number(inst.paidAmount));
       }
+    }
+
+    // Process systems and clean up tempSales
+    for (const cs of customerMap.values()) {
+      if (cs.tempSales && cs.tempSales.length > 0) {
+        const totalDP = cs.tempSales.reduce((sum, s) => sum + s.downPayment, 0);
+        cs.downPayment = totalDP;
+        
+        if (cs.tempSales.length === 1) {
+          const s = cs.tempSales[0];
+          cs.totalInstallments = s.totalInstallments;
+          cs.installmentAmount = s.installmentAmount;
+          if (s.totalInstallments > 0) {
+            cs.installmentSystem = `نظام ${s.totalInstallments} أشهر (${s.installmentAmount.toLocaleString('en-US')} ج.م شهرياً)`;
+          } else {
+            cs.installmentSystem = 'كاش';
+          }
+        } else {
+          const first = cs.tempSales[0];
+          const allSameDuration = cs.tempSales.every(s => s.totalInstallments === first.totalInstallments);
+          if (allSameDuration && first.totalInstallments > 0) {
+            const sumInstAmt = cs.tempSales.reduce((sum, s) => sum + s.installmentAmount, 0);
+            cs.totalInstallments = first.totalInstallments;
+            cs.installmentAmount = sumInstAmt;
+            cs.installmentSystem = `نظام ${first.totalInstallments} أشهر (${sumInstAmt.toLocaleString('en-US')} ج.م شهرياً لـ ${cs.tempSales.length} عقود)`;
+          } else {
+            cs.totalInstallments = Math.round(cs.tempSales.reduce((sum, s) => sum + s.totalInstallments, 0) / cs.tempSales.length);
+            cs.installmentAmount = cs.tempSales.reduce((sum, s) => sum + s.installmentAmount, 0);
+            cs.installmentSystem = `${cs.tempSales.length} عقود بأنظمة مختلفة (مجموع الأقساط: ${cs.installmentAmount.toLocaleString('en-US')} ج.م)`;
+          }
+        }
+      }
+      delete cs.tempSales;
     }
 
     const customerSummary = Array.from(customerMap.values())
