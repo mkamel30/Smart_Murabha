@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { backupApi, adminApi, branchApi, exportApi } from '@/api/client';
 import { PageHeader, PrimaryButton } from '@/lib/Actions';
 import { useToast } from '@/lib/toast';
-import { Settings, Download, Upload, RefreshCw, Trash2, Lock, ShieldCheck, Building2, FileJson, FileSpreadsheet } from 'lucide-react';
+import { Settings, Download, Upload, RefreshCw, Trash2, Lock, ShieldCheck, Building2, FileSpreadsheet } from 'lucide-react';
 
 interface BackupFile {
   name: string;
@@ -25,8 +25,7 @@ export default function SettingsPage() {
   const [branchName, setBranchName] = useState('');
   const [savedBranchName, setSavedBranchName] = useState('');
   const [branchLoading, setBranchLoading] = useState(false);
-  const [exportMonth, setExportMonth] = useState(new Date().getMonth() + 1);
-  const [exportYear, setExportYear] = useState(new Date().getFullYear());
+
 
   const loadNetworkUrl = async () => {
     if (window.electronAPI?.getNetworkURL) {
@@ -71,36 +70,7 @@ export default function SettingsPage() {
     }
   };
 
-  const handleExportMonthly = async () => {
-    if (!savedBranchName) {
-      showToast('يجب إدخال اسم الفرع أولاً في الإعدادات', 'error');
-      return;
-    }
-    setBranchLoading(true);
-    try {
-      const response = await branchApi.exportMonthly(exportMonth, exportYear);
-      const disposition = response.headers['content-disposition'];
-      let filename = `تقرير-${savedBranchName}-${exportMonth}-${exportYear}.json`;
-      if (disposition) {
-        const match = disposition.match(/filename\*=UTF-8''(.+)/);
-        if (match) filename = decodeURIComponent(match[1]);
-      }
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', filename);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-      showToast('تم تصدير التقرير بنجاح', 'success');
-    } catch (err: any) {
-      const msg = err.response?.data?.error || 'فشل تصدير التقرير';
-      showToast(msg, 'error');
-    } finally {
-      setBranchLoading(false);
-    }
-  };
+
 
   useEffect(() => {
     loadBackupFiles();
@@ -270,58 +240,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Monthly Export for HQ */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <FileJson className="w-5 h-5 text-[#0A2472]" />
-          <h2 className="text-lg font-semibold">تصدير تقرير شهري للإدارة المالية</h2>
-        </div>
-        <div className="space-y-4">
-          <div className="p-4 bg-blue-50/50 border border-blue-100 rounded-lg">
-            <p className="text-sm text-blue-800 mb-4">
-              يتم تصدير ملف JSON يحتوي على إجماليات وتفصيليات الأقساط والمدفوعات والمتأخرات لإرساله للإدارة المالية.
-            </p>
-            <div className="flex gap-3 items-end flex-wrap">
-              <div>
-                <label className="block text-xs text-slate-500 mb-1">السنة</label>
-                <select
-                  value={exportYear}
-                  onChange={(e) => setExportYear(parseInt(e.target.value))}
-                  className="px-3 py-2 border border-slate-200 rounded-lg text-sm"
-                >
-                  {[2024, 2025, 2026, 2027].map(y => (
-                    <option key={y} value={y}>{y}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs text-slate-500 mb-1">الشهر</label>
-                <select
-                  value={exportMonth}
-                  onChange={(e) => setExportMonth(parseInt(e.target.value))}
-                  className="px-3 py-2 border border-slate-200 rounded-lg text-sm"
-                >
-                  {[
-                    { v: 1, n: 'يناير' }, { v: 2, n: 'فبراير' }, { v: 3, n: 'مارس' },
-                    { v: 4, n: 'أبريل' }, { v: 5, n: 'مايو' }, { v: 6, n: 'يونيو' },
-                    { v: 7, n: 'يوليو' }, { v: 8, n: 'أغسطس' }, { v: 9, n: 'سبتمبر' },
-                    { v: 10, n: 'أكتوبر' }, { v: 11, n: 'نوفمبر' }, { v: 12, n: 'ديسمبر' }
-                  ].map(m => (
-                    <option key={m.v} value={m.v}>{m.n}</option>
-                  ))}
-                </select>
-              </div>
-              <PrimaryButton onClick={handleExportMonthly} disabled={branchLoading || !savedBranchName}>
-                <Download size={16} className="ml-2" />
-                تصدير التقرير
-              </PrimaryButton>
-            </div>
-            {!savedBranchName && (
-              <p className="text-xs text-amber-600 mt-3">⚠️ يجب إدخال اسم الفرع أولاً لتتمكن من التصدير</p>
-            )}
-          </div>
-        </div>
-      </div>
+
 
       {/* Full Data Export */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">

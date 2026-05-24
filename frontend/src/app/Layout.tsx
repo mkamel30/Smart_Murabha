@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import logo from '@/assets/logo.png';
 import { NavLink, Outlet } from 'react-router-dom';
 import { ar } from '@/i18n/ar';
@@ -21,6 +21,42 @@ import { Footer } from '@/components/Footer';
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [hasUpdate, setHasUpdate] = useState(false);
+  const [latestVersion, setLatestVersion] = useState('');
+
+  useEffect(() => {
+    const checkUpdates = async () => {
+      try {
+        const res = await fetch('https://api.github.com/repos/mkamel30/Smart_Murabha/releases/latest');
+        if (res.status === 200) {
+          const data = await res.json();
+          const remoteVersion = data.tag_name.replace('v', '');
+          const currentVersion = __APP_VERSION__;
+          
+          const isNewer = (rStr: string, cStr: string) => {
+            const r = rStr.replace('v', '').split('.').map(Number);
+            const c = cStr.replace('v', '').split('.').map(Number);
+            for (let i = 0; i < Math.max(r.length, c.length); i++) {
+              if ((r[i] || 0) > (c[i] || 0)) return true;
+              if ((r[i] || 0) < (c[i] || 0)) return false;
+            }
+            return false;
+          };
+
+          if (isNewer(remoteVersion, currentVersion)) {
+            setHasUpdate(true);
+            setLatestVersion(data.tag_name);
+          }
+        }
+      } catch (err) {
+        console.log('Failed to check for updates:', err);
+      }
+    };
+
+    checkUpdates();
+    const interval = setInterval(checkUpdates, 10 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="flex h-screen bg-slate-50">
@@ -142,6 +178,27 @@ export default function Layout() {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-h-screen">
+        {hasUpdate && (
+          <div 
+            onClick={async () => {
+              if (window.electronAPI?.checkForUpdates) {
+                await window.electronAPI.checkForUpdates();
+              } else {
+                alert(`📢 تحديث جديد متاح: ${latestVersion}\n\nيرجى إعادة تحميل صفحة الويب للحصول على آخر التحديثات.`);
+                window.location.reload();
+              }
+            }}
+            className="bg-gradient-to-r from-amber-500 to-orange-600 text-white text-center py-2.5 text-xs font-bold cursor-pointer hover:from-amber-600 hover:to-orange-700 transition-all flex items-center justify-center gap-2 animate-pulse shadow-md select-none"
+            title="اضغط لتثبيت التحديث"
+          >
+            <span className="flex h-2 w-2 relative">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+            </span>
+            <span>📢 تحديث جديد متاح الآن من التطبيق ({latestVersion})! اضغط هنا لتنزيل وتثبيت التحديث فوراً تلقائياً وبأمان دون فقد أي بيانات.</span>
+          </div>
+        )}
+        
         {/* Top Bar */}
         <header className="h-14 bg-white border-b border-slate-200 flex items-center px-4 shadow-sm">
           <div className="flex-1" />

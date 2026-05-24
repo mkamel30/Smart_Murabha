@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { reportsApi, exportApi, customersApi } from '@/api/client';
+import { reportsApi, exportApi, customersApi, branchApi } from '@/api/client';
 import { formatCurrency, formatDate, downloadBlob } from '@/lib/utils';
 import type { SalesReport, CollectionsReport, OverdueReport, Customer } from '@/types';
 import { ar } from '@/i18n/ar';
 import { LoadingScreen } from '@/lib/Spinner';
 import { PageHeader, PrimaryButton, SecondaryButton } from '@/lib/Actions';
 import { SmartSelect } from '@/lib/SmartSelect';
-import { Banknote, Users } from 'lucide-react';
+import { Banknote, Users, Download } from 'lucide-react';
+import { useToast } from '@/lib/toast';
 
 interface MonthClosingReport {
   month: { year: number; month: number; name: string };
@@ -35,6 +36,7 @@ interface MonthClosingReport {
 }
 
 export default function Reports() {
+  const { showToast } = useToast();
   const location = useLocation();
   const state = location.state as any;
   const [reportType, setReportType] = useState<'sales' | 'collections' | 'overdue' | 'monthClosing' | 'collectionRatio'>(
@@ -46,6 +48,8 @@ export default function Reports() {
   const [monthClosingReport, setMonthClosingReport] = useState<MonthClosingReport | null>(null);
   const [collectionRatioReport, setCollectionRatioReport] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [savedBranchName, setSavedBranchName] = useState('');
+  const [branchLoading, setBranchLoading] = useState(false);
   
   // Auto-set dates if currentMonth filter is requested
   const [startDate, setStartDate] = useState(() => {
@@ -77,7 +81,48 @@ export default function Reports() {
 
   useEffect(() => {
     loadCustomers();
+    loadBranchConfig();
   }, []);
+
+  const loadBranchConfig = async () => {
+    try {
+      const config = await branchApi.getConfig();
+      setSavedBranchName(config.branchName || '');
+    } catch (err) {
+      console.error('Failed to load branch config:', err);
+    }
+  };
+
+  const handleExportMonthly = async () => {
+    if (!savedBranchName) {
+      showToast('يجب إدخال اسم الفرع أولاً في الإعدادات', 'error');
+      return;
+    }
+    setBranchLoading(true);
+    try {
+      const response = await branchApi.exportMonthly(selectedMonth, selectedYear);
+      const disposition = response.headers['content-disposition'];
+      let filename = `تقرير-${savedBranchName}-${selectedMonth}-${selectedYear}.json`;
+      if (disposition) {
+        const match = disposition.match(/filename\*=UTF-8''(.+)/);
+        if (match) filename = decodeURIComponent(match[1]);
+      }
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      showToast('تم تصدير التقرير بنجاح', 'success');
+    } catch (err: any) {
+      const msg = err.response?.data?.error || 'فشل تصدير التقرير';
+      showToast(msg, 'error');
+    } finally {
+      setBranchLoading(false);
+    }
+  };
 
   const loadCustomers = async () => {
     try {
@@ -746,13 +791,26 @@ export default function Reports() {
       {/* Month Closing Report */}
       {reportType === 'monthClosing' && monthClosingReport && (
         <div className="space-y-4">
-          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-            <h2 className="text-lg font-bold text-[#0A2472] mb-2">
-              تقرير إقفال الشهر - {monthClosingReport.month.name} {monthClosingReport.month.year}
-            </h2>
-            <p className="text-sm text-slate-500">
-              الفترة: {formatDate(monthClosingReport.period.start)} - {formatDate(monthClosingReport.period.end)}
-            </p>
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 flex justify-between items-center flex-wrap gap-4">
+            <div>
+              <h2 className="text-lg font-bold text-[#0A2472] mb-2">
+                تقرير إقفال الشهر - {monthClosingReport.month.name} {monthClosingReport.month.year}
+              </h2>
+              <p className="text-sm text-slate-500">
+                الفترة: {formatDate(monthClosingReport.period.start)} - {formatDate(monthClosingReport.period.end)}
+              </p>
+            </div>
+            
+            <div className="p-3 bg-blue-50/50 border border-blue-100 rounded-lg flex items-center gap-4 flex-wrap">
+              <div>
+                <p className="text-xs font-bold text-blue-800 font-semibold">تصدير تقرير شهري للإدارة المالية (JSON)</p>
+                <p className="text-[10px] text-blue-600 mt-0.5">ملف JSON يحتوي على إجماليات وتفصيليات الأقساط والمدفوعات والمتأخرات لإرساله للإدارة.</p>
+              </div>
+              <PrimaryButton onClick={handleExportMonthly} disabled={branchLoading || !savedBranchName} size="sm">
+                <Download size={14} className="ml-1" />
+                {branchLoading ? 'جاري التصدير...' : 'تصدير JSON'}
+              </PrimaryButton>
+            </div>
           </div>
 
           {/* Sales Section */}

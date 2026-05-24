@@ -52,6 +52,14 @@ export const installmentsApi = {
   update: (id: string, data: Partial<{ receiptNumber: string; paidDate: string | null; isPaid: boolean; paidAmount: number; paymentPlace: string }>) => 
     api.patch(`/installments/${id}`, data).then(r => r.data),
   getOverdue: () => api.get('/installments/overdue').then(r => r.data),
+  exportUpdateTemplate: () => api.get('/installments/export-update', { responseType: 'blob' }).then(r => r.data),
+  importUpdate: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/installments/import-update', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }).then(r => r.data);
+  },
 };
 
 export const rewardsApi = {
