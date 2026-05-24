@@ -15,6 +15,7 @@ export interface MonthlyExportJson {
   };
   summary: {
     activeContracts: number;
+    completedContracts?: number;
     totalContractValue: number;
     totalPaidAllTime: number;
     totalRemainingAllTime: number;
@@ -181,6 +182,7 @@ export class MonthlyExportService {
 
     const summary = {
       activeContracts: activeSales.filter(s => s.status === 'ACTIVE').length,
+      completedContracts: activeSales.filter(s => s.status === 'COMPLETED').length,
       totalContractValue: Math.round(totalContractValue),
       totalPaidAllTime: Math.round(totalPaidAllTime),
       totalRemainingAllTime: Math.round(totalRemainingAllTime),
@@ -343,15 +345,20 @@ export class MonthlyExportService {
         } else {
           const first = cs.tempSales[0];
           const allSameDuration = cs.tempSales.every(s => s.totalInstallments === first.totalInstallments);
-          if (allSameDuration && first.totalInstallments > 0) {
-            const sumInstAmt = cs.tempSales.reduce((sum, s) => sum + s.installmentAmount, 0);
+          const allSameAmount = cs.tempSales.every(s => s.installmentAmount === first.installmentAmount);
+          if (allSameDuration && allSameAmount && first.totalInstallments > 0) {
             cs.totalInstallments = first.totalInstallments;
-            cs.installmentAmount = sumInstAmt;
-            cs.installmentSystem = `نظام ${first.totalInstallments} أشهر (${sumInstAmt.toLocaleString('en-US')} ج.م شهرياً لـ ${cs.tempSales.length} عقود)`;
+            cs.installmentAmount = first.installmentAmount;
+            cs.installmentSystem = `نظام ${first.totalInstallments} أشهر (${first.installmentAmount.toLocaleString('en-US')} ج.م للعقد * ${cs.activeSales} عقود)`;
+          } else if (allSameDuration && first.totalInstallments > 0) {
+            const avgInstAmt = Math.round(cs.tempSales.reduce((sum, s) => sum + s.installmentAmount, 0) / cs.tempSales.length);
+            cs.totalInstallments = first.totalInstallments;
+            cs.installmentAmount = avgInstAmt;
+            cs.installmentSystem = `نظام ${first.totalInstallments} أشهر (بمتوسط ${avgInstAmt.toLocaleString('en-US')} ج.م للعقد * ${cs.activeSales} عقود)`;
           } else {
             cs.totalInstallments = Math.round(cs.tempSales.reduce((sum, s) => sum + s.totalInstallments, 0) / cs.tempSales.length);
-            cs.installmentAmount = cs.tempSales.reduce((sum, s) => sum + s.installmentAmount, 0);
-            cs.installmentSystem = `${cs.tempSales.length} عقود بأنظمة مختلفة (مجموع الأقساط: ${cs.installmentAmount.toLocaleString('en-US')} ج.م)`;
+            cs.installmentAmount = Math.round(cs.tempSales.reduce((sum, s) => sum + s.installmentAmount, 0) / cs.tempSales.length);
+            cs.installmentSystem = `${cs.activeSales} عقود بأنظمة مختلفة (مثال: نظام ${first.totalInstallments} أشهر بقيمة ${first.installmentAmount.toLocaleString('en-US')} ج.م للعقد)`;
           }
         }
       }
