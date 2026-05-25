@@ -37,6 +37,13 @@ const MIGRATIONS: Migration[] = [
       `CREATE INDEX IF NOT EXISTS "Installment_paymentId_idx" ON "Installment"("paymentId");`,
       `DROP INDEX IF EXISTS "Payment_receiptNumber_key";`
     ]
+  },
+  {
+    version: '1.0.4',
+    description: 'إضافة سجل الاتصالات واللوج للمتابعات (logs)',
+    sql: [
+      `ALTER TABLE FollowUp ADD COLUMN logs TEXT DEFAULT '[]';`
+    ]
   }
 ];
 

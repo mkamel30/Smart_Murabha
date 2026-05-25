@@ -110,6 +110,7 @@ model FollowUp {
   id              String     @id @default(uuid())
   customerId      String
   note            String
+  logs            String     @default("[]")
   nextFollowUp    DateTime?
   isCompleted     Boolean    @default(false)
   completedAt     DateTime?

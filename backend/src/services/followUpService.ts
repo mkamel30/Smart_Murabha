@@ -26,6 +26,7 @@ export class FollowUpService {
     return followUpRepo.create({
       customerId: data.customerId,
       note: data.note,
+      logs: data.logs || '[]',
       nextFollowUp: data.nextFollowUp 
         ? (typeof data.nextFollowUp === 'string' ? new Date(data.nextFollowUp) : data.nextFollowUp)
         : null,
@@ -42,6 +43,7 @@ export class FollowUpService {
 
     const updateData: Record<string, unknown> = {};
     if (data.note) updateData.note = data.note;
+    if (data.logs !== undefined) updateData.logs = data.logs;
     if (data.nextFollowUp !== undefined) {
       updateData.nextFollowUp = data.nextFollowUp 
         ? (typeof data.nextFollowUp === 'string' ? new Date(data.nextFollowUp) : data.nextFollowUp)

@@ -77,6 +77,7 @@ export interface FollowUp {
   id: string;
   customerId: string;
   note: string;
+  logs?: string;
   nextFollowUp?: string;
   isCompleted: boolean;
   completedAt?: string;

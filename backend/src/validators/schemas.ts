@@ -58,6 +58,7 @@ export const followUpSchema = z.object({
   customerId: z.string().uuid('معرف العميل مطلوب'),
   note: z.string().min(1, 'ملاحظة المتابعة مطلوبة').max(1000, 'الملاحظة يجب أن لا تتجاوز 1000 حرف').trim(),
   nextFollowUp: z.string().or(z.date()).optional(),
+  logs: z.string().optional(),
 });
 
 export const voidSaleSchema = z.object({
