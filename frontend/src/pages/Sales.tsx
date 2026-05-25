@@ -32,7 +32,7 @@ export default function Sales() {
   const [formData, setFormData] = useState({
     customerId: '',
     machineSerial: '',
-    saleType: 'CASH' as 'CASH' | 'INSTALLMENT',
+    saleType: 'INSTALLMENT' as 'CASH' | 'INSTALLMENT',
     totalPrice: 0,
     downPayment: 0,
     actualPaidAmount: 0,
@@ -129,7 +129,7 @@ export default function Sales() {
       setFormData({
         customerId: '',
         machineSerial: '',
-        saleType: 'CASH',
+        saleType: 'INSTALLMENT',
         totalPrice: 0,
         downPayment: 0,
         actualPaidAmount: 0,
@@ -307,29 +307,15 @@ export default function Sales() {
                   required
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">{ar.sales.saleType}</label>
-                  <SmartSelect
-                    options={[
-                      { id: 'CASH', label: ar.sales.cash },
-                      { id: 'INSTALLMENT', label: ar.sales.installment },
-                    ]}
-                    value={formData.saleType}
-                    onChange={(value) => setFormData({ ...formData, saleType: value as 'CASH' | 'INSTALLMENT' })}
-                    placeholder={ar.sales.saleType}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">{ar.sales.saleDate}</label>
-                  <input
-                    type="date"
-                    value={formData.saleDate}
-                    onChange={(e) => setFormData({ ...formData, saleDate: e.target.value })}
-                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#0A2472]/20 focus:border-[#0A2472]"
-                    required
-                  />
-                </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">{ar.sales.saleDate}</label>
+                <input
+                  type="date"
+                  value={formData.saleDate}
+                  onChange={(e) => setFormData({ ...formData, saleDate: e.target.value })}
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#0A2472]/20 focus:border-[#0A2472]"
+                  required
+                />
               </div>
             </div>
           )}
@@ -407,38 +393,36 @@ export default function Sales() {
                  </div>
               </div>
 
-              {formData.saleType === 'INSTALLMENT' && (
-                <div className="grid grid-cols-2 gap-4 items-end bg-purple-50 p-4 rounded-xl border border-purple-100">
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">عدد الأشهر</label>
-                    <input
-                      type="number"
-                      value={formData.months}
-                      onChange={(e) => setFormData({ ...formData, months: Number(e.target.value) })}
-                      onWheel={(e) => e.currentTarget.blur()}
-                      className="w-full px-3 py-2 bg-white border border-purple-200 rounded-md text-sm font-bold"
-                      min="1"
-                      max="120"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">قيمة القسط الشهري (تقريبي)</label>
-                    <input
-                      type="number"
-                      value={Math.round(((formData.totalPrice - (formData.downPayment || 0)) / (formData.months || 1)) * 100) / 100}
-                      onChange={(e) => {
-                        const amount = Number(e.target.value);
-                        if (amount > 0) {
-                          const calculatedMonths = Math.round((formData.totalPrice - (formData.downPayment || 0)) / amount);
-                          setFormData({ ...formData, months: calculatedMonths > 0 ? calculatedMonths : 1 });
-                        }
-                      }}
-                      onWheel={(e) => e.currentTarget.blur()}
-                      className="w-full px-3 py-2 bg-white border border-purple-200 rounded-md text-sm font-bold text-purple-700"
-                    />
-                  </div>
+              <div className="grid grid-cols-2 gap-4 items-end bg-purple-50 p-4 rounded-xl border border-purple-100">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">عدد الأشهر</label>
+                  <input
+                    type="number"
+                    value={formData.months}
+                    onChange={(e) => setFormData({ ...formData, months: Number(e.target.value) })}
+                    onWheel={(e) => e.currentTarget.blur()}
+                    className="w-full px-3 py-2 bg-white border border-purple-200 rounded-md text-sm font-bold"
+                    min="1"
+                    max="120"
+                  />
                 </div>
-              )}
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">قيمة القسط الشهري (تقريبي)</label>
+                  <input
+                    type="number"
+                    value={Math.round(((formData.totalPrice - (formData.downPayment || 0)) / (formData.months || 1)) * 100) / 100}
+                    onChange={(e) => {
+                      const amount = Number(e.target.value);
+                      if (amount > 0) {
+                        const calculatedMonths = Math.round((formData.totalPrice - (formData.downPayment || 0)) / amount);
+                        setFormData({ ...formData, months: calculatedMonths > 0 ? calculatedMonths : 1 });
+                      }
+                    }}
+                    onWheel={(e) => e.currentTarget.blur()}
+                    className="w-full px-3 py-2 bg-white border border-purple-200 rounded-md text-sm font-bold text-purple-700"
+                  />
+                </div>
+              </div>
             </div>
           )}
 
@@ -451,8 +435,6 @@ export default function Sales() {
                   <div className="font-bold">{customers.find(c => c.id === formData.customerId)?.name}</div>
                   <div className="text-gray-500">الماكينة:</div>
                   <div className="font-bold">{formData.machineSerial}</div>
-                  <div className="text-gray-500">النوع:</div>
-                  <div className="font-bold">{formData.saleType === 'CASH' ? 'كاش' : 'قسط'}</div>
                   <div className="text-gray-500">الإجمالي:</div>
                   <div className="font-bold text-[#0A2472]">{formatCurrency(formData.totalPrice)}</div>
                   <div className="text-gray-500">المدفوع:</div>
