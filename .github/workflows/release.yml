@@ -50,6 +50,7 @@ jobs:
             electron/release/*.zip
             electron/release/*.exe
           name: Smart Murabha ${{ github.ref_name }}
+          overwrite: true
           draft: false
           prerelease: false
         env:
