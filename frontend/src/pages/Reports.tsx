@@ -528,7 +528,6 @@ export default function Reports() {
                     )}
                   </div>
                   <div className="flex gap-4 text-xs">
-                  <div className="flex gap-4 text-xs">
                     <span className="font-semibold text-slate-600">إجمالي: {formatCurrency(group.total)}</span>
                     <span className="font-semibold text-teal-600">مدفوع: {formatCurrency(group.paid)}</span>
                     <span className="font-semibold text-orange-600">متبقي: {formatCurrency(group.remaining)}</span>
