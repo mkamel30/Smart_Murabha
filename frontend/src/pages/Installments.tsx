@@ -9,6 +9,7 @@ import { PaymentPlaceSelect } from '@/lib/PaymentPlace';
 import { Modal } from '@/lib/Modal';
 import { useToast } from '@/lib/toast';
 import { SearchFilterBar } from '@/lib/SearchFilterBar';
+import { Phone } from 'lucide-react';
 
 type StatusFilter = '' | 'unpaid' | 'overdue' | 'dueToday' | 'paid';
 
@@ -394,7 +395,7 @@ export default function Installments() {
               const key = groupBy === 'customer' 
                 ? (inst.sale?.customer?.name || 'غير معروف')
                 : new Date(inst.dueDate).toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' });
-              if (!groups[key]) groups[key] = { items: [], total: 0, count: 0 };
+              if (!groups[key]) groups[key] = { items: [], total: 0, count: 0, customer: inst.sale?.customer };
               groups[key].items.push(inst);
               if (!inst.isPaid) {
                 groups[key].total = Math.round((groups[key].total + (Number(inst.amount) - Number(inst.paidAmount))) * 100) / 100;
@@ -404,8 +405,34 @@ export default function Installments() {
             }, {})
           ).map(([groupName, group]: any) => (
             <div key={groupName} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
-                <h3 className="font-bold text-[#0A2472]">{groupName} ({group.items.length} قسط)</h3>
+              <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center flex-wrap gap-2">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h3 className="font-bold text-[#0A2472]">{groupName} ({group.items.length} قسط)</h3>
+                  {groupBy === 'customer' && group.customer && (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {group.customer.phone && (
+                        <a
+                          href={`tel:${group.customer.phone}`}
+                          title="اتصال بالعميل"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white hover:bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-xs font-mono font-bold transition-colors shadow-xs"
+                        >
+                          <Phone className="w-3.5 h-3.5 text-blue-600" />
+                          <span dir="ltr">{group.customer.phone}</span>
+                        </a>
+                      )}
+                      {group.customer.bkCode && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-200/70 border border-slate-300 rounded text-[11px] font-mono text-slate-700">
+                          <span className="text-slate-500 font-sans">كود:</span> {group.customer.bkCode}
+                        </span>
+                      )}
+                      {group.customer.department && (
+                        <span className="text-xs text-slate-600 bg-white/80 border border-slate-200 px-2 py-0.5 rounded">
+                          {group.customer.department}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
                 <div className="flex gap-4 text-xs">
                   <span className="font-semibold text-red-600">غير مدفوع: {group.count} ( {formatCurrency(group.total)} )</span>
                 </div>
