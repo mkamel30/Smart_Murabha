@@ -149,6 +149,7 @@ export const importApi = {
 
 export const adminApi = {
   resetDatabase: (code: string) => api.post('/admin/database/reset', { code }).then(r => r.data),
+  getMfaSecret: () => api.get('/admin/mfa-secret').then(r => r.data),
 };
 
 export const branchApi = {

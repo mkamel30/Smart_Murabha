@@ -21,6 +21,7 @@ export default function SettingsPage() {
   const [networkUrl, setNetworkUrl] = useState<string>('');
   const [showMfaModal, setShowMfaModal] = useState(false);
   const [mfaCode, setMfaCode] = useState('');
+  const [mfaSecret, setMfaSecret] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [branchName, setBranchName] = useState('');
   const [savedBranchName, setSavedBranchName] = useState('');
@@ -137,6 +138,17 @@ export default function SettingsPage() {
       showToast('فشل إنشاء النسخ الاحتياطي التلقائي', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleOpenMfaModal = async () => {
+    setShowMfaModal(true);
+    setMfaSecret('');
+    try {
+      const { secret } = await adminApi.getMfaSecret();
+      setMfaSecret(secret);
+    } catch (err) {
+      console.log('MFA secret unavailable from this client:', err);
     }
   };
 
@@ -469,7 +481,7 @@ export default function SettingsPage() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => setShowMfaModal(true)}
+                  onClick={handleOpenMfaModal}
                   disabled={loading}
                   className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors font-semibold text-sm disabled:opacity-50"
                 >
@@ -747,6 +759,21 @@ export default function SettingsPage() {
                   autoFocus
                 />
               </div>
+
+              {mfaSecret && (
+                <div className="mt-4 bg-slate-50 border border-slate-200 rounded-xl p-3 text-right">
+                  <div className="text-[11px] text-slate-500 mb-1.5">مفتاح هذا الجهاز للتسجيل في تطبيق المصادقة:</div>
+                  <div className="flex items-center gap-2">
+                    <code dir="ltr" className="flex-1 text-xs font-mono text-slate-700 break-all">{mfaSecret}</code>
+                    <button
+                      onClick={() => navigator.clipboard.writeText(mfaSecret)}
+                      className="text-[11px] px-2 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 shrink-0"
+                    >
+                      نسخ
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div className="flex gap-3 mt-8">
                 <button

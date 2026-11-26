@@ -1,11 +1,19 @@
 import { Router, Request, Response } from 'express';
 import { authenticator } from 'otplib';
 import prisma from '../lib/prisma.js';
+import securityConfigService from '../services/securityConfigService.js';
 
 const router = Router();
 
-// The Master Secret (stored internally/hardcoded for this simple Master MFA requirement)
-const MASTER_MFA_SECRET = 'NVRW643UMF2HK3DM';
+const LOOPBACK_ADDRESSES = ['127.0.0.1', '::1', '::ffff:127.0.0.1'];
+
+// Revealing the per-install secret is recovery for the machine's owner, so LAN clients never get it.
+router.get('/mfa-secret', (req: Request, res: Response) => {
+  if (!LOOPBACK_ADDRESSES.includes(req.ip || '')) {
+    return res.status(403).json({ error: 'متاح من الجهاز المحلي فقط' });
+  }
+  res.json({ secret: securityConfigService.getConfig().mfaSecret });
+});
 
 router.post('/database/reset', async (req: Request, res: Response) => {
   try {
@@ -15,7 +23,7 @@ router.post('/database/reset', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Code is required' });
     }
 
-    const isValid = authenticator.check(code, MASTER_MFA_SECRET) || code === '344405';
+    const isValid = authenticator.check(code, securityConfigService.getConfig().mfaSecret);
 
     if (!isValid) {
       return res.status(401).json({ 

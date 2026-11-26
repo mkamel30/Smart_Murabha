@@ -16,11 +16,15 @@ release/
 # Database files
 *.db
 *.db-journal
+*.db-shm
 *.db-wal
 *.db.backup
 murabha-backup-*.db
 murabha-auto-*.db
 backups/
+
+# Per-install recovery secrets
+security-config.json
 **/backups/
 
 # Logs
