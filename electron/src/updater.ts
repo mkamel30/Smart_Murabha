@@ -45,8 +45,9 @@ function fetchLatestRelease(): Promise<GithubRelease> {
 }
 
 function isNewerVersion(remote: string, current: string): boolean {
-  const r = remote.replace('v', '').split('.').map(Number);
-  const c = current.split('.').map(Number);
+  // Release tags can carry a build suffix (e.g. v1.4.9_Electron); parseInt keeps the numeric part instead of yielding NaN.
+  const r = remote.replace('v', '').split('.').map((part) => parseInt(part, 10) || 0);
+  const c = current.split('.').map((part) => parseInt(part, 10) || 0);
   for (let i = 0; i < Math.max(r.length, c.length); i++) {
     if ((r[i] || 0) > (c[i] || 0)) return true;
     if ((r[i] || 0) < (c[i] || 0)) return false;

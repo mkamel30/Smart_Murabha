@@ -15,8 +15,8 @@ interface FooterProps {
 }
 
 function isNewerVersion(remote: string, current: string): boolean {
-  const r = remote.replace('v', '').split('.').map(Number);
-  const c = current.replace('v', '').split('.').map(Number);
+  const r = remote.replace('v', '').split('.').map((part) => parseInt(part, 10) || 0);
+  const c = current.replace('v', '').split('.').map((part) => parseInt(part, 10) || 0);
   for (let i = 0; i < Math.max(r.length, c.length); i++) {
     if ((r[i] || 0) > (c[i] || 0)) return true;
     if ((r[i] || 0) < (c[i] || 0)) return false;

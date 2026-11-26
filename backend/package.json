@@ -1,6 +1,6 @@
 {
   "name": "backend",
-  "version": "1.4.9_Electron",
+  "version": "1.4.9",
   "private": true,
   "type": "module",
   "scripts": {

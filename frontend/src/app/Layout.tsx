@@ -34,8 +34,8 @@ export default function Layout() {
           const currentVersion = __APP_VERSION__;
           
           const isNewer = (rStr: string, cStr: string) => {
-            const r = rStr.replace('v', '').split('.').map(Number);
-            const c = cStr.replace('v', '').split('.').map(Number);
+            const r = rStr.replace('v', '').split('.').map((part) => parseInt(part, 10) || 0);
+            const c = cStr.replace('v', '').split('.').map((part) => parseInt(part, 10) || 0);
             for (let i = 0; i < Math.max(r.length, c.length); i++) {
               if ((r[i] || 0) > (c[i] || 0)) return true;
               if ((r[i] || 0) < (c[i] || 0)) return false;
