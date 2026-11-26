@@ -1,7 +1,7 @@
 {
   "name": "payment-app",
-  "version": "1.4.8",
-  "versionLabel": "1.4.8",
+  "version": "1.4.9_Electron",
+  "versionLabel": "1.4.9_Electron",
   "private": true,
   "description": "Payment & Sales Desktop App for collection team",
   "workspaces": [

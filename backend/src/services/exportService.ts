@@ -97,6 +97,7 @@ export class ExportService {
       { header: 'كود العميل', key: 'bkCode', width: 15 },
       { header: 'نوع العميل', key: 'customerType', width: 15 },
       { header: 'اسم العميل', key: 'customerName', width: 25 },
+      { header: 'رقم الهاتف', key: 'phone', width: 15 },
       { header: 'رقم الماكينة', key: 'machineSerial', width: 20 },
       { header: 'نظام التقسيط', key: 'months', width: 12 },
       { header: 'نوع البيع', key: 'saleType', width: 15 },
@@ -114,6 +115,7 @@ export class ExportService {
         bkCode: sale.customer.bkCode,
         customerType: sale.customer.customerType,
         customerName: sale.customer.name,
+        phone: sale.customer.phone || '',
         machineSerial: sale.machineSerial,
         months: sale.saleType === 'INSTALLMENT' ? `${sale.months} شهر` : 'سداد كامل',
         saleType: sale.saleType === 'CASH' ? 'سداد كامل' : 'أقساط',
@@ -149,6 +151,7 @@ export class ExportService {
     worksheet.columns = [
       { header: 'رقم الإيصال', key: 'receiptNumber', width: 20 },
       { header: 'اسم العميل', key: 'customerName', width: 25 },
+      { header: 'رقم الهاتف', key: 'phone', width: 15 },
       { header: 'كود العميل', key: 'bkCode', width: 15 },
       { header: 'نوع العميل', key: 'customerType', width: 15 },
       { header: 'رقم الماكينة', key: 'machineSerial', width: 20 },
@@ -164,6 +167,7 @@ export class ExportService {
       worksheet.addRow({
         receiptNumber: payment.receiptNumber,
         customerName: payment.sale.customer.name,
+        phone: payment.sale.customer.phone || '',
         bkCode: payment.sale.customer.bkCode,
         customerType: payment.sale.customer.customerType,
         machineSerial: payment.sale.machineSerial,
@@ -210,6 +214,7 @@ export class ExportService {
 
     worksheet.columns = [
       { header: 'اسم العميل', key: 'customerName', width: 25 },
+      { header: 'رقم الهاتف', key: 'phone', width: 15 },
       { header: 'كود العميل', key: 'bkCode', width: 15 },
       { header: 'نوع العميل', key: 'customerType', width: 15 },
       { header: 'الإدارة', key: 'department', width: 15 },
@@ -226,6 +231,7 @@ export class ExportService {
     for (const inst of overdue) {
       worksheet.addRow({
         customerName: inst.sale.customer.name,
+        phone: inst.sale.customer.phone || '',
         bkCode: inst.sale.customer.bkCode,
         customerType: inst.sale.customer.customerType,
         department: inst.sale.customer.department || '',
